@@ -1,0 +1,899 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import api from "./api";
+import "./App.css";
+
+const ALTERNATIVAS = ["A", "B", "C", "D"];
+const SERIES = [5, 6, 7, 8, 9];
+const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
+const SENHA_LOGIN = "cadastro2026";
+
+function App() {
+  const fotoInputRef = useRef(null);
+  const [logado, setLogado] = useState(
+    () => localStorage.getItem("corretor-gabarito-logado") === "true"
+  );
+  const [emailLogin, setEmailLogin] = useState("");
+  const [senhaLogin, setSenhaLogin] = useState("");
+  const [erroLogin, setErroLogin] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState("corrigir");
+
+  const [escolas, setEscolas] = useState([]);
+  const [turmas, setTurmas] = useState([]);
+  const [alunos, setAlunos] = useState([]);
+  const [disciplinasModelo, setDisciplinasModelo] = useState([]);
+
+  const [escolaId, setEscolaId] = useState("");
+  const [turmaId, setTurmaId] = useState("");
+  const [alunoId, setAlunoId] = useState("");
+
+  const [bimestre, setBimestre] = useState(1);
+  const [dia, setDia] = useState(1);
+  const [serieGabarito, setSerieGabarito] = useState(8);
+
+  const [foto, setFoto] = useState(null);
+  const [resultado, setResultado] = useState(null);
+  const [resultadosPorAluno, setResultadosPorAluno] = useState({});
+  const [gabaritoOficial, setGabaritoOficial] = useState({});
+  const [mensagemGabarito, setMensagemGabarito] = useState("");
+
+  useEffect(() => {
+    carregarEscolas();
+  }, []);
+
+  useEffect(() => {
+    carregarModeloEGabarito();
+  }, [escolaId, bimestre, dia, serieGabarito]);
+
+  useEffect(() => {
+    if (escolaId && turmaId) {
+      carregarResultadosSalvos(turmaId);
+    }
+  }, [escolaId, turmaId, bimestre, dia]);
+
+  const questoesModelo = useMemo(() => {
+    let numeroQuestao = 1;
+
+    return disciplinasModelo.flatMap((disciplina) => {
+      return Array.from({ length: disciplina.quantidade_questoes }, () => {
+        const questao = {
+          numero: numeroQuestao,
+          disciplina: disciplina.disciplina,
+        };
+
+        numeroQuestao += 1;
+        return questao;
+      });
+    });
+  }, [disciplinasModelo]);
+
+  const disciplinasPlanilha = useMemo(() => {
+    const disciplinas = new Set();
+
+    Object.values(resultadosPorAluno).forEach((resultadoAluno) => {
+      Object.keys(resultadoAluno.disciplinas || {}).forEach((disciplina) => {
+        disciplinas.add(disciplina);
+      });
+    });
+
+    return Array.from(disciplinas);
+  }, [resultadosPorAluno]);
+
+  const disciplinasResultado = resultado?.respostas_salvas
+    ? calcularNotasDisciplinas(resumirPorDisciplina(resultado.respostas_salvas))
+    : {};
+
+  function extrairAcertos(dados) {
+    return (
+      dados?.acertos ??
+      dados?.total_acertos ??
+      dados?.quantidade_acertos ??
+      dados?.qtd_acertos ??
+      null
+    );
+  }
+
+  function extrairNota(dados) {
+    return dados?.nota_global ?? dados?.nota ?? null;
+  }
+
+  function extrairNotaDia(dados) {
+    return dados?.nota_dia ?? null;
+  }
+
+  function obterLinhasResultado(dados) {
+    if (!dados) return [];
+    if (Array.isArray(dados)) return dados;
+    if (Array.isArray(dados.resultados)) return dados.resultados;
+    if (Array.isArray(dados.alunos)) return dados.alunos;
+    if (Array.isArray(dados.planilha)) return dados.planilha;
+
+    return [dados];
+  }
+
+  function resumirPorDisciplina(respostasSalvas = []) {
+    return respostasSalvas.reduce((resumo, resposta) => {
+      const disciplina = resposta.disciplina || "Sem disciplina";
+
+      if (!resumo[disciplina]) {
+        resumo[disciplina] = {
+          acertos: 0,
+          total: 0,
+          nota: 0,
+        };
+      }
+
+      resumo[disciplina].total += 1;
+
+      if (resposta.acertou) {
+        resumo[disciplina].acertos += 1;
+      }
+
+      return resumo;
+    }, {});
+  }
+
+  function calcularNotasDisciplinas(disciplinas = {}) {
+    return Object.fromEntries(
+      Object.entries(disciplinas).map(([disciplina, resumo]) => [
+        disciplina,
+        {
+          ...resumo,
+          nota: resumo.total ? Number(((resumo.acertos / resumo.total) * 10).toFixed(1)) : 0,
+        },
+      ])
+    );
+  }
+
+  function atualizarPlanilha(dados) {
+    const linhasResultado = obterLinhasResultado(dados);
+
+    setResultadosPorAluno((resultadosAtuais) => {
+      const novosResultados = { ...resultadosAtuais };
+
+      linhasResultado.forEach((linha) => {
+        const id = linha.aluno_id ?? linha.id_aluno ?? linha.id ?? alunoId;
+        if (!id) return;
+
+        const disciplinas = calcularNotasDisciplinas(resumirPorDisciplina(linha.respostas_salvas));
+
+        novosResultados[String(id)] = {
+          acertos: extrairAcertos(linha),
+          nota: extrairNota(linha),
+          notaDia: extrairNotaDia(linha),
+          disciplinas,
+          acertosGlobal: linha.acertos_global,
+          totalQuestoesGlobal: linha.total_questoes_global,
+          resultadosDias: linha.resultados_dias || {},
+          modeloProvaId: linha.modelo_prova_id,
+          observacao: linha.observacao,
+        };
+      });
+
+      return novosResultados;
+    });
+  }
+
+  async function carregarEscolas() {
+    try {
+      const response = await api.get("/escolas");
+      setEscolas(response.data);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao carregar escolas");
+    }
+  }
+
+  async function carregarModeloEGabarito() {
+    setDisciplinasModelo([]);
+    setGabaritoOficial({});
+    setMensagemGabarito("");
+
+    if (!escolaId) return;
+
+    try {
+      const modeloResponse = await api.get("/modelo-prova", {
+        params: { escola_id: escolaId, bimestre, dia },
+      });
+
+      setDisciplinasModelo(modeloResponse.data.disciplinas || []);
+
+      try {
+        const gabaritoResponse = await api.get("/gabarito", {
+          params: { escola_id: escolaId, bimestre, dia, serie: serieGabarito },
+        });
+
+        const respostas = {};
+        gabaritoResponse.data.forEach((questao) => {
+          respostas[questao.numero_questao] = questao.resposta_correta;
+        });
+
+        setGabaritoOficial(respostas);
+        setMensagemGabarito(
+          Object.keys(respostas).length > 0
+            ? "Gabarito oficial carregado"
+            : "Nenhum gabarito oficial salvo"
+        );
+      } catch (error) {
+        if (error.response?.status === 404) {
+          setMensagemGabarito("Nenhum gabarito oficial salvo");
+          return;
+        }
+
+        throw error;
+      }
+    } catch (error) {
+      console.error(error);
+      setMensagemGabarito("Modelo de prova não encontrado para essa seleção");
+    }
+  }
+
+  async function salvarGabaritoOficial() {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    if (questoesModelo.length === 0) {
+      alert("Modelo de prova não encontrado para essa seleção.");
+      return;
+    }
+
+    const respostas = questoesModelo.map((questao) => gabaritoOficial[questao.numero]);
+
+    if (respostas.some((resposta) => !resposta)) {
+      alert("Preencha todas as respostas do gabarito.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", dia);
+      formData.append("serie", serieGabarito);
+      formData.append("respostas", respostas.join(","));
+
+      const response = await api.post("/gabarito", formData);
+      setMensagemGabarito(`${response.data.mensagem}: ${response.data.total_questoes} questões`);
+      alert("Gabarito oficial salvo com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao salvar gabarito");
+    }
+  }
+
+  async function carregarTurmas(idEscola) {
+    if (!idEscola) return;
+
+    try {
+      const response = await api.get(`/turmas/${idEscola}`);
+      setTurmas(response.data);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao carregar turmas");
+    }
+  }
+
+  async function carregarAlunos(idTurma) {
+    if (!idTurma) return;
+
+    try {
+      const response = await api.get(`/alunos/${idTurma}`);
+      setAlunos(response.data);
+      setResultadosPorAluno({});
+      await carregarResultadosSalvos(idTurma);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao carregar alunos");
+    }
+  }
+
+  async function carregarResultadosSalvos(idTurma = turmaId) {
+    if (!escolaId || !idTurma) return;
+
+    try {
+      const response = await api.get("/resultados-alunos", {
+        params: { turma_id: idTurma, escola_id: escolaId, bimestre },
+      });
+
+      atualizarPlanilha(response.data);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setResultadosPorAluno({});
+        return;
+      }
+
+      console.error(error);
+    }
+  }
+
+  async function baixarResultadoFinalExcel() {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    try {
+      const response = await api.get("/resultado-final-excel", {
+        params: { escola_id: escolaId, bimestre },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `resultado_final_${bimestre}_bimestre.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao baixar resultado final.");
+    }
+  }
+
+  async function enviarFoto() {
+    if (!escolaId || !turmaId || !alunoId || !foto) {
+      alert("Selecione escola, turma, aluno e foto.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", alunoId);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", dia);
+      formData.append("foto", foto);
+
+      const response = await api.post("/corrigir-foto", formData);
+
+      setResultado(response.data);
+      atualizarPlanilha(response.data);
+      await carregarResultadosSalvos(turmaId);
+      setAlunoId("");
+      setFoto(null);
+
+      if (fotoInputRef.current) {
+        fotoInputRef.current.value = "";
+      }
+
+      alert("Foto enviada e correção concluída com sucesso!");
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.data?.detail) {
+        const detalhe = error.response.data.detail;
+        alert(typeof detalhe === "string" ? detalhe : detalhe.mensagem);
+      } else {
+        alert("Erro ao enviar foto");
+      }
+    }
+  }
+
+  function trocarEscola(idEscola) {
+    setEscolaId(idEscola);
+    setTurmaId("");
+    setAlunoId("");
+    setTurmas([]);
+    setAlunos([]);
+    setResultado(null);
+    setResultadosPorAluno({});
+    carregarTurmas(idEscola);
+  }
+
+  function entrar(event) {
+    event.preventDefault();
+
+    if (emailLogin.trim().toLowerCase() !== EMAIL_LOGIN || senhaLogin !== SENHA_LOGIN) {
+      setErroLogin("E-mail ou senha inválidos.");
+      return;
+    }
+
+    localStorage.setItem("corretor-gabarito-logado", "true");
+    setLogado(true);
+    setErroLogin("");
+    setSenhaLogin("");
+  }
+
+  function sair() {
+    localStorage.removeItem("corretor-gabarito-logado");
+    setLogado(false);
+    setEmailLogin("");
+    setSenhaLogin("");
+    setErroLogin("");
+  }
+
+  function renderizarTabelaResultadoFinal() {
+    if (alunos.length === 0) {
+      return <p className="texto-vazio">Selecione uma turma para ver o resultado final.</p>;
+    }
+
+    return (
+      <section className="planilha">
+        <div className="planilha-cabecalho">
+          <h2>Resultado final do bimestre</h2>
+          <span>{alunos.length} aluno(s)</span>
+        </div>
+
+        <div className="tabela-wrapper">
+          <table className="tabela-resultado-final">
+            <thead>
+              <tr>
+                <th>Nº</th>
+                <th>Aluno</th>
+                {disciplinasPlanilha.map((disciplina) => (
+                  <th key={disciplina}>{disciplina}</th>
+                ))}
+                <th>Nota global</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {alunos.map((aluno) => {
+                const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+                const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
+                const nota = resultadoAluno?.nota ?? extrairNota(aluno);
+                const temAcertos = acertos !== null && acertos !== undefined;
+
+                return (
+                  <tr key={aluno.id}>
+                    <td>{aluno.numero_chamada ?? "-"}</td>
+                    <td>{aluno.nome}</td>
+
+                    {disciplinasPlanilha.map((disciplina) => {
+                      const resumo = resultadoAluno?.disciplinas?.[disciplina];
+
+                      return <td key={disciplina}>{resumo ? resumo.nota : "-"}</td>;
+                    })}
+
+                    <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
+                    <td>
+                      <span className={temAcertos ? "status corrigido" : "status pendente"}>
+                        {temAcertos ? "Corrigido" : "Pendente"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
+  if (!logado) {
+    return (
+      <main className="login-pagina">
+        <form className="login-card" onSubmit={entrar}>
+          <h1>Sistema de Correção de Gabaritos</h1>
+          <h2>Login do professor</h2>
+
+          <div className="campo">
+            <label>E-mail</label>
+            <input
+              type="email"
+              value={emailLogin}
+              onChange={(e) => setEmailLogin(e.target.value)}
+              autoComplete="username"
+              autoFocus
+            />
+          </div>
+
+          <div className="campo">
+            <label>Senha</label>
+            <input
+              type="password"
+              value={senhaLogin}
+              onChange={(e) => setSenhaLogin(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+
+          {erroLogin && <p className="erro-login">{erroLogin}</p>}
+
+          <button type="submit">Entrar</button>
+        </form>
+      </main>
+    );
+  }
+
+  return (
+    <div className="container">
+      <div className="topo-sistema">
+        <h1>Sistema de Correção de Gabaritos</h1>
+        <button className="botao-sair" type="button" onClick={sair}>
+          Sair
+        </button>
+      </div>
+
+      <nav className="navegacao" aria-label="Páginas">
+        <button
+          className={paginaAtual === "corrigir" ? "aba ativa" : "aba"}
+          onClick={() => setPaginaAtual("corrigir")}
+          type="button"
+        >
+          Corrigir cartões
+        </button>
+
+        <button
+          className={paginaAtual === "gabarito" ? "aba ativa" : "aba"}
+          onClick={() => setPaginaAtual("gabarito")}
+          type="button"
+        >
+          Gabaritos oficiais
+        </button>
+
+        <button
+          className={paginaAtual === "resultado" ? "aba ativa" : "aba"}
+          onClick={() => setPaginaAtual("resultado")}
+          type="button"
+        >
+          Resultado final
+        </button>
+      </nav>
+
+      <section className="secao">
+        <h2>Dados da prova</h2>
+
+        <div className="grade-controles">
+          <div className="campo">
+            <label>Escola</label>
+
+            <select value={escolaId} onChange={(e) => trocarEscola(e.target.value)}>
+              <option value="">Selecione</option>
+
+              {escolas.map((escola) => (
+                <option key={escola.id} value={escola.id}>
+                  {escola.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="campo">
+            <label>Bimestre</label>
+
+            <select
+              value={bimestre}
+              onChange={(e) => {
+                setBimestre(e.target.value);
+                setResultado(null);
+              }}
+            >
+              <option value={1}>1º Bimestre</option>
+              <option value={2}>2º Bimestre</option>
+              <option value={3}>3º Bimestre</option>
+              <option value={4}>4º Bimestre</option>
+            </select>
+          </div>
+
+          <div className="campo">
+            <label>Dia da prova</label>
+
+            <select
+              value={dia}
+              onChange={(e) => {
+                setDia(e.target.value);
+                setResultado(null);
+              }}
+            >
+              <option value={1}>Dia 1</option>
+              <option value={2}>Dia 2</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {paginaAtual === "gabarito" && (
+        <section className="secao pagina">
+          <div className="planilha-cabecalho">
+            <h2>Cadastrar gabarito oficial</h2>
+            {mensagemGabarito && <span>{mensagemGabarito}</span>}
+          </div>
+
+          <div className="campo campo-serie">
+            <label>Série</label>
+            <select
+              value={serieGabarito}
+              onChange={(e) => setSerieGabarito(Number(e.target.value))}
+            >
+              {SERIES.map((serie) => (
+                <option key={serie} value={serie}>
+                  {serie}º ano
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {questoesModelo.length > 0 ? (
+            <>
+              <div className="gabarito-grid">
+                {disciplinasModelo.map((disciplina) => {
+                  const questoesDisciplina = questoesModelo.filter(
+                    (questao) => questao.disciplina === disciplina.disciplina
+                  );
+
+                  return (
+                    <div className="disciplina-bloco" key={disciplina.id}>
+                      <h3>{disciplina.disciplina}</h3>
+
+                      <div className="questoes-grid">
+                        {questoesDisciplina.map((questao) => (
+                          <label className="questao-gabarito" key={questao.numero}>
+                            <span>{questao.numero}</span>
+
+                            <select
+                              value={gabaritoOficial[questao.numero] || ""}
+                              onChange={(e) => {
+                                setGabaritoOficial((respostasAtuais) => ({
+                                  ...respostasAtuais,
+                                  [questao.numero]: e.target.value,
+                                }));
+                              }}
+                            >
+                              <option value="">-</option>
+                              {ALTERNATIVAS.map((alternativa) => (
+                                <option key={alternativa} value={alternativa}>
+                                  {alternativa}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button className="botao-secundario" onClick={salvarGabaritoOficial}>
+                Salvar gabarito oficial
+              </button>
+            </>
+          ) : (
+            <p className="texto-vazio">Selecione escola, bimestre e dia para carregar o modelo.</p>
+          )}
+        </section>
+      )}
+
+      {paginaAtual === "corrigir" && (
+        <>
+          <section className="secao pagina">
+            <h2>Corrigir cartão-resposta</h2>
+
+            <div className="grade-controles">
+              <div className="campo">
+                <label>Turma</label>
+
+                <select
+                  value={turmaId}
+                  onChange={(e) => {
+                    setTurmaId(e.target.value);
+                    setAlunoId("");
+                    setAlunos([]);
+                    setResultado(null);
+                    setResultadosPorAluno({});
+                    carregarAlunos(e.target.value);
+                  }}
+                >
+                  <option value="">Selecione</option>
+
+                  {turmas.map((turma) => (
+                    <option key={turma.id} value={turma.id}>
+                      {turma.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo">
+                <label>Aluno</label>
+
+                <select
+                  value={alunoId}
+                  onChange={(e) => {
+                    setAlunoId(e.target.value);
+                    setResultado(null);
+                  }}
+                >
+                  <option value="">Selecione</option>
+
+                  {alunos.map((aluno) => (
+                    <option key={aluno.id} value={aluno.id}>
+                      {aluno.numero_chamada} - {aluno.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="campo">
+                <label>Foto do Gabarito</label>
+
+                <input
+                  ref={fotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    setFoto(e.target.files[0]);
+                    setResultado(null);
+                  }}
+                />
+              </div>
+            </div>
+
+            <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
+          </section>
+
+          {false && alunos.length > 0 && (
+            <section className="planilha">
+              <div className="planilha-cabecalho">
+                <h2>Planilha de notas por disciplina</h2>
+                <span>{alunos.length} aluno(s)</span>
+              </div>
+
+              <div className="tabela-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nº</th>
+                      <th>Aluno</th>
+                      {disciplinasPlanilha.map((disciplina) => (
+                        <th key={disciplina}>{disciplina}</th>
+                      ))}
+                      <th>Nota dia 1</th>
+                      <th>Nota dia 2</th>
+                      <th>Nota global</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {alunos.map((aluno) => {
+                      const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+                      const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
+                      const nota = resultadoAluno?.nota ?? extrairNota(aluno);
+                      const temAcertos = acertos !== null && acertos !== undefined;
+                      const notaDia1 = resultadoAluno?.resultadosDias?.[1]?.nota ?? resultadoAluno?.resultadosDias?.["1"]?.nota;
+                      const notaDia2 = resultadoAluno?.resultadosDias?.[2]?.nota ?? resultadoAluno?.resultadosDias?.["2"]?.nota;
+
+                      return (
+                        <tr key={aluno.id}>
+                          <td>{aluno.numero_chamada ?? "-"}</td>
+                          <td>{aluno.nome}</td>
+
+                          {disciplinasPlanilha.map((disciplina) => {
+                            const resumo = resultadoAluno?.disciplinas?.[disciplina];
+
+                            return (
+                              <td key={disciplina}>
+                                {resumo ? resumo.nota : "-"}
+                              </td>
+                            );
+                          })}
+
+                          <td>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</td>
+                          <td>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</td>
+                          <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
+                          <td>
+                            <span className={temAcertos ? "status corrigido" : "status pendente"}>
+                              {temAcertos ? "Corrigido" : "Pendente"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {resultado && (
+            <div className="resultado">
+              <h2>Resultado</h2>
+
+              <p>
+                <strong>Mensagem:</strong> {resultado.mensagem}
+              </p>
+
+              {Object.keys(disciplinasResultado).length > 0 && (
+                <div className="resultado-disciplinas">
+                  <h3>Notas por disciplina</h3>
+
+                  <ul>
+                    {Object.entries(disciplinasResultado).map(([disciplina, resumo]) => (
+                      <li key={disciplina}>
+                        <strong>{disciplina}:</strong> {resumo.nota} ({resumo.acertos}/{resumo.total})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {resultado.acertos !== undefined && (
+                <p>
+                  <strong>Total:</strong> {resultado.acertos}/{resultado.total_questoes}
+                </p>
+              )}
+
+              {resultado.nota_global !== undefined && (
+                <p>
+                  <strong>Nota global:</strong> {resultado.nota_global}
+                </p>
+              )}
+
+              {resultado.nota_dia !== undefined && (
+                <p>
+                  <strong>Nota do dia:</strong> {resultado.nota_dia}
+                </p>
+              )}
+
+              {resultado.modelo_prova_id && (
+                <p>
+                  <strong>Modelo da prova:</strong> {resultado.modelo_prova_id}
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {paginaAtual === "resultado" && (
+        <section className="secao pagina">
+          <div className="planilha-cabecalho">
+            <h2>Resultado final</h2>
+            <button
+              className="botao-download"
+              type="button"
+              onClick={baixarResultadoFinalExcel}
+              disabled={!escolaId}
+            >
+              Baixar Excel da escola
+            </button>
+          </div>
+
+          <div className="grade-controles">
+            <div className="campo">
+              <label>Turma</label>
+
+              <select
+                value={turmaId}
+                onChange={(e) => {
+                  setTurmaId(e.target.value);
+                  setAlunoId("");
+                  setAlunos([]);
+                  setResultado(null);
+                  setResultadosPorAluno({});
+                  carregarAlunos(e.target.value);
+                }}
+              >
+                <option value="">Selecione</option>
+
+                {turmas.map((turma) => (
+                  <option key={turma.id} value={turma.id}>
+                    {turma.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {renderizarTabelaResultadoFinal()}
+        </section>
+      )}
+
+      <footer className="rodape-sistema">
+        Desenvolvido por Sharlayne Jardini. Todos os direitos reservados.
+      </footer>
+    </div>
+  );
+}
+
+export default App;
