@@ -256,6 +256,11 @@ input[type="file"]:focus {
   box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.14);
 }
 
+textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
 .texto-vazio {
   margin: 0;
   color: var(--muted);
@@ -488,6 +493,44 @@ tbody tr:last-child td {
   background: white;
   border: 1px solid #bdd7ff;
   border-radius: 8px;
+}
+
+.correcao-manual {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.respostas-lidas {
+  margin-top: 16px;
+}
+
+.respostas-lidas h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.respostas-lidas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.respostas-lidas-grid span {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.resposta-correta {
+  background: var(--success-soft);
+  color: #126a33;
+}
+
+.resposta-incorreta {
+  background: #fee4e2;
+  color: var(--danger);
 }
 
 .rodape-sistema {

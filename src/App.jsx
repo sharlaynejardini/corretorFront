@@ -37,6 +37,7 @@ function App() {
   const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
 
   const [foto, setFoto] = useState(null);
+  const [respostasManuais, setRespostasManuais] = useState("");
   const [resultado, setResultado] = useState(null);
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
   const [gabaritoOficial, setGabaritoOficial] = useState({});
@@ -421,6 +422,35 @@ function App() {
       } else {
         alert("Erro ao enviar foto");
       }
+    }
+  }
+
+  async function corrigirManual() {
+    if (!escolaId || !turmaId || !alunoId || !respostasManuais.trim()) {
+      alert("Selecione escola, turma, aluno e informe as respostas.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", alunoId);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", dia);
+      formData.append("respostas", respostasManuais);
+
+      const response = await api.post("/corrigir-manual", formData);
+
+      setResultado(response.data);
+      atualizarPlanilha(response.data);
+      await carregarResultadosSalvos(turmaId);
+      setRespostasManuais("");
+
+      alert("Correção manual concluída com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao corrigir manualmente.");
     }
   }
 
@@ -827,6 +857,22 @@ function App() {
             </div>
 
             <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
+
+            <div className="correcao-manual">
+              <div className="campo">
+                <label>Respostas manuais</label>
+                <textarea
+                  value={respostasManuais}
+                  onChange={(e) => setRespostasManuais(e.target.value.toUpperCase())}
+                  placeholder="Ex.: A,D,C,B,B,C..."
+                  rows={3}
+                />
+              </div>
+
+              <button className="botao-secundario" type="button" onClick={corrigirManual}>
+                Corrigir manualmente
+              </button>
+            </div>
           </section>
 
           {import.meta.env.VITE_MOSTRAR_PLANILHA_CORRECAO === "true" && alunos.length > 0 && (
@@ -937,6 +983,29 @@ function App() {
                 <p>
                   <strong>Modelo da prova:</strong> {resultado.modelo_prova_id}
                 </p>
+              )}
+
+              {resultado.codigo_gabarito && (
+                <p>
+                  <strong>Gabarito usado:</strong> {resultado.codigo_gabarito}
+                </p>
+              )}
+
+              {resultado.respostas_salvas?.length > 0 && (
+                <div className="respostas-lidas">
+                  <h3>Respostas consideradas</h3>
+
+                  <div className="respostas-lidas-grid">
+                    {resultado.respostas_salvas.map((resposta) => (
+                      <span
+                        key={resposta.numero_questao}
+                        className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
+                      >
+                        {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
