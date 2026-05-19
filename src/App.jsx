@@ -4,6 +4,11 @@ import "./App.css";
 
 const ALTERNATIVAS = ["A", "B", "C", "D"];
 const SERIES = [5, 6, 7, 8, 9];
+const GRUPOS_GABARITO = [
+  { codigo: "PADRAO", nome: "Padrao" },
+  { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
+  { codigo: "8B", nome: "8B - Takaoka Dia 1" },
+];
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
 
@@ -29,6 +34,7 @@ function App() {
   const [bimestre, setBimestre] = useState(1);
   const [dia, setDia] = useState(1);
   const [serieGabarito, setSerieGabarito] = useState(8);
+  const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
 
   const [foto, setFoto] = useState(null);
   const [resultado, setResultado] = useState(null);
@@ -42,7 +48,7 @@ function App() {
 
   useEffect(() => {
     carregarModeloEGabarito();
-  }, [escolaId, bimestre, dia, serieGabarito]);
+  }, [escolaId, bimestre, dia, serieGabarito, codigoGabarito]);
 
   useEffect(() => {
     if (escolaId && turmaId) {
@@ -199,7 +205,13 @@ function App() {
 
       try {
         const gabaritoResponse = await api.get("/gabarito", {
-          params: { escola_id: escolaId, bimestre, dia, serie: serieGabarito },
+          params: {
+            escola_id: escolaId,
+            bimestre,
+            dia,
+            serie: serieGabarito,
+            codigo_gabarito: codigoGabarito,
+          },
         });
 
         const respostas = {};
@@ -252,6 +264,7 @@ function App() {
       formData.append("bimestre", bimestre);
       formData.append("dia", dia);
       formData.append("serie", serieGabarito);
+      formData.append("codigo_gabarito", codigoGabarito);
       formData.append("respostas", respostas.join(","));
 
       const response = await api.post("/gabarito", formData);
@@ -315,7 +328,7 @@ function App() {
     }
 
     try {
-      const response = await api.get("/resultado-final-excel", {
+      const response = await api.get("/resultado-final-xlsx", {
         params: { escola_id: escolaId, bimestre },
         responseType: "blob",
       });
@@ -323,7 +336,7 @@ function App() {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = `resultado_final_${bimestre}_bimestre.csv`;
+      link.download = `resultado_final_${bimestre}_bimestre.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -331,6 +344,43 @@ function App() {
     } catch (error) {
       console.error(error);
       alert("Erro ao baixar resultado final.");
+    }
+  }
+
+  async function editarNotaAluno(aluno, diaNota, notaAtual) {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    const valor = prompt(
+      `Informe a nova nota do Dia ${diaNota} para ${aluno.nome}`,
+      notaAtual !== null && notaAtual !== undefined ? String(notaAtual).replace(".", ",") : ""
+    );
+
+    if (valor === null) return;
+
+    const nota = Number(valor.replace(",", "."));
+    if (Number.isNaN(nota) || nota < 0 || nota > 10) {
+      alert("Informe uma nota entre 0 e 10.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", aluno.id);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", diaNota);
+      formData.append("nota", nota);
+
+      await api.patch("/nota-aluno", formData);
+      await carregarResultadosSalvos(turmaId);
+      alert("Nota atualizada com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao editar nota.");
     }
   }
 
@@ -428,6 +478,8 @@ function App() {
                 {disciplinasPlanilha.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
+                <th>Nota dia 1</th>
+                <th>Nota dia 2</th>
                 <th>Nota global</th>
                 <th>Status</th>
               </tr>
@@ -439,6 +491,8 @@ function App() {
                 const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno);
                 const temAcertos = acertos !== null && acertos !== undefined;
+                const notaDia1 = resultadoAluno?.resultadosDias?.[1]?.nota ?? resultadoAluno?.resultadosDias?.["1"]?.nota;
+                const notaDia2 = resultadoAluno?.resultadosDias?.[2]?.nota ?? resultadoAluno?.resultadosDias?.["2"]?.nota;
 
                 return (
                   <tr key={aluno.id}>
@@ -450,6 +504,24 @@ function App() {
 
                       return <td key={disciplina}>{resumo ? resumo.nota : "-"}</td>;
                     })}
+
+                    <td>
+                      <div className="nota-editavel">
+                        <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</span>
+                        <button type="button" onClick={() => editarNotaAluno(aluno, 1, notaDia1)}>
+                          Editar
+                        </button>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="nota-editavel">
+                        <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</span>
+                        <button type="button" onClick={() => editarNotaAluno(aluno, 2, notaDia2)}>
+                          Editar
+                        </button>
+                      </div>
+                    </td>
 
                     <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
                     <td>
@@ -579,7 +651,11 @@ function App() {
             <select
               value={dia}
               onChange={(e) => {
-                setDia(e.target.value);
+                const novoDia = e.target.value;
+                setDia(novoDia);
+                if (Number(novoDia) !== 1) {
+                  setCodigoGabarito("PADRAO");
+                }
                 setResultado(null);
               }}
             >
@@ -601,7 +677,13 @@ function App() {
             <label>Série</label>
             <select
               value={serieGabarito}
-              onChange={(e) => setSerieGabarito(Number(e.target.value))}
+              onChange={(e) => {
+                const novaSerie = Number(e.target.value);
+                setSerieGabarito(novaSerie);
+                if (novaSerie !== 8) {
+                  setCodigoGabarito("PADRAO");
+                }
+              }}
             >
               {SERIES.map((serie) => (
                 <option key={serie} value={serie}>
@@ -610,6 +692,22 @@ function App() {
               ))}
             </select>
           </div>
+
+          {Number(serieGabarito) === 8 && Number(dia) === 1 && (
+            <div className="campo campo-grupo-gabarito">
+              <label>Grupo do gabarito</label>
+              <select
+                value={codigoGabarito}
+                onChange={(e) => setCodigoGabarito(e.target.value)}
+              >
+                {GRUPOS_GABARITO.map((grupo) => (
+                  <option key={grupo.codigo} value={grupo.codigo}>
+                    {grupo.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {questoesModelo.length > 0 ? (
             <>
@@ -731,7 +829,7 @@ function App() {
             <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
           </section>
 
-          {false && alunos.length > 0 && (
+          {import.meta.env.VITE_MOSTRAR_PLANILHA_CORRECAO === "true" && alunos.length > 0 && (
             <section className="planilha">
               <div className="planilha-cabecalho">
                 <h2>Planilha de notas por disciplina</h2>

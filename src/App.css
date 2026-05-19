@@ -219,6 +219,10 @@ button:disabled {
   max-width: 220px;
 }
 
+.campo-grupo-gabarito {
+  max-width: 360px;
+}
+
 label {
   margin-bottom: 7px;
   color: #344054;
@@ -443,6 +447,22 @@ tbody tr:last-child td {
 .status.pendente {
   background: var(--warning-soft);
   color: var(--muted);
+}
+
+.nota-editavel {
+  display: inline-grid;
+  grid-template-columns: minmax(32px, auto) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 104px;
+}
+
+.nota-editavel button {
+  width: auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 .resultado-disciplinas {
