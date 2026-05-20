@@ -40,6 +40,8 @@ function App() {
   const [respostasManuais, setRespostasManuais] = useState("");
   const [resultado, setResultado] = useState(null);
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
+  const [detalheAluno, setDetalheAluno] = useState(null);
+  const [carregandoDetalheAluno, setCarregandoDetalheAluno] = useState(false);
   const [gabaritoOficial, setGabaritoOficial] = useState({});
   const [mensagemGabarito, setMensagemGabarito] = useState("");
 
@@ -105,6 +107,21 @@ function App() {
 
   function extrairNotaDia(dados) {
     return dados?.nota_dia ?? null;
+  }
+
+  function obterResultadoDia(resultadoAluno, diaResultado) {
+    return (
+      resultadoAluno?.resultadosDias?.[diaResultado] ??
+      resultadoAluno?.resultadosDias?.[String(diaResultado)] ??
+      null
+    );
+  }
+
+  function obterDiaDetalhePreferido(resultadoAluno) {
+    if (obterResultadoDia(resultadoAluno, dia)) return dia;
+    if (obterResultadoDia(resultadoAluno, 1)) return 1;
+    if (obterResultadoDia(resultadoAluno, 2)) return 2;
+    return dia;
   }
 
   function obterLinhasResultado(dados) {
@@ -296,6 +313,7 @@ function App() {
       const response = await api.get(`/alunos/${idTurma}`);
       setAlunos(response.data);
       setResultadosPorAluno({});
+      setDetalheAluno(null);
       await carregarResultadosSalvos(idTurma);
     } catch (error) {
       console.error(error);
@@ -311,6 +329,7 @@ function App() {
         params: { turma_id: idTurma, escola_id: escolaId, bimestre },
       });
 
+      setResultadosPorAluno({});
       atualizarPlanilha(response.data);
     } catch (error) {
       if (error.response?.status === 404) {
@@ -378,10 +397,76 @@ function App() {
 
       await api.patch("/nota-aluno", formData);
       await carregarResultadosSalvos(turmaId);
+      if (detalheAluno?.aluno?.id === aluno.id && detalheAluno?.dia === diaNota) {
+        await abrirDetalheAluno(aluno, diaNota, true);
+      }
       alert("Nota atualizada com sucesso!");
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.detail || "Erro ao editar nota.");
+    }
+  }
+
+  async function abrirDetalheAluno(aluno, diaDetalhe = dia, forcar = false) {
+    const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+    const resultadoDia = obterResultadoDia(resultadoAluno, diaDetalhe);
+
+    const temResultado = Boolean(resultadoDia) || resultadoAluno?.acertos !== undefined || resultadoAluno?.nota !== undefined;
+
+    if (!forcar && !temResultado) {
+      return;
+    }
+
+    setCarregandoDetalheAluno(true);
+
+    try {
+      const response = await api.get("/respostas-aluno", {
+        params: {
+          aluno_id: aluno.id,
+          escola_id: escolaId,
+          bimestre,
+          dia: diaDetalhe,
+        },
+      });
+
+      setDetalheAluno({
+        aluno,
+        dia: diaDetalhe,
+        dados: response.data,
+      });
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao carregar detalhes da correcao.");
+    } finally {
+      setCarregandoDetalheAluno(false);
+    }
+  }
+
+  async function excluirCorrecaoAluno() {
+    if (!detalheAluno) return;
+
+    const confirmado = window.confirm(
+      `Excluir a correcao do Dia ${detalheAluno.dia} de ${detalheAluno.aluno.nome}?`
+    );
+
+    if (!confirmado) return;
+
+    try {
+      await api.delete("/correcao-aluno", {
+        params: {
+          aluno_id: detalheAluno.aluno.id,
+          escola_id: escolaId,
+          bimestre,
+          dia: detalheAluno.dia,
+        },
+      });
+
+      setDetalheAluno(null);
+      await carregarResultadosSalvos(turmaId);
+      alert("Correcao excluida com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao excluir correcao.");
     }
   }
 
@@ -462,6 +547,7 @@ function App() {
     setAlunos([]);
     setResultado(null);
     setResultadosPorAluno({});
+    setDetalheAluno(null);
     carregarTurmas(idEscola);
   }
 
@@ -521,11 +607,16 @@ function App() {
                 const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno);
                 const temAcertos = acertos !== null && acertos !== undefined;
-                const notaDia1 = resultadoAluno?.resultadosDias?.[1]?.nota ?? resultadoAluno?.resultadosDias?.["1"]?.nota;
-                const notaDia2 = resultadoAluno?.resultadosDias?.[2]?.nota ?? resultadoAluno?.resultadosDias?.["2"]?.nota;
+                const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
+                const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
+                const notaDia2 = obterResultadoDia(resultadoAluno, 2)?.nota;
 
                 return (
-                  <tr key={aluno.id}>
+                  <tr
+                    key={aluno.id}
+                    className={temAcertos ? "linha-clicavel" : ""}
+                    onClick={() => abrirDetalheAluno(aluno, diaDetalhePreferido)}
+                  >
                     <td>{aluno.numero_chamada ?? "-"}</td>
                     <td>{aluno.nome}</td>
 
@@ -538,7 +629,13 @@ function App() {
                     <td>
                       <div className="nota-editavel">
                         <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</span>
-                        <button type="button" onClick={() => editarNotaAluno(aluno, 1, notaDia1)}>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            editarNotaAluno(aluno, 1, notaDia1);
+                          }}
+                        >
                           Editar
                         </button>
                       </div>
@@ -547,7 +644,13 @@ function App() {
                     <td>
                       <div className="nota-editavel">
                         <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</span>
-                        <button type="button" onClick={() => editarNotaAluno(aluno, 2, notaDia2)}>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            editarNotaAluno(aluno, 2, notaDia2);
+                          }}
+                        >
                           Editar
                         </button>
                       </div>
@@ -904,11 +1007,16 @@ function App() {
                       const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
                       const nota = resultadoAluno?.nota ?? extrairNota(aluno);
                       const temAcertos = acertos !== null && acertos !== undefined;
-                      const notaDia1 = resultadoAluno?.resultadosDias?.[1]?.nota ?? resultadoAluno?.resultadosDias?.["1"]?.nota;
-                      const notaDia2 = resultadoAluno?.resultadosDias?.[2]?.nota ?? resultadoAluno?.resultadosDias?.["2"]?.nota;
+                      const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
+                      const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
+                      const notaDia2 = obterResultadoDia(resultadoAluno, 2)?.nota;
 
                       return (
-                        <tr key={aluno.id}>
+                        <tr
+                          key={aluno.id}
+                          className={temAcertos ? "linha-clicavel" : ""}
+                          onClick={() => abrirDetalheAluno(aluno, diaDetalhePreferido)}
+                        >
                           <td>{aluno.numero_chamada ?? "-"}</td>
                           <td>{aluno.nome}</td>
 
@@ -922,8 +1030,34 @@ function App() {
                             );
                           })}
 
-                          <td>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</td>
-                          <td>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</td>
+                          <td>
+                            <div className="nota-editavel">
+                              <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</span>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  editarNotaAluno(aluno, 1, notaDia1);
+                                }}
+                              >
+                                Editar
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="nota-editavel">
+                              <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</span>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  editarNotaAluno(aluno, 2, notaDia2);
+                                }}
+                              >
+                                Editar
+                              </button>
+                            </div>
+                          </td>
                           <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
                           <td>
                             <span className={temAcertos ? "status corrigido" : "status pendente"}>
@@ -1054,6 +1188,104 @@ function App() {
 
           {renderizarTabelaResultadoFinal()}
         </section>
+      )}
+
+      {detalheAluno && (
+        <div className="modal-fundo" onClick={() => setDetalheAluno(null)}>
+          <section className="modal-correcao" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-cabecalho">
+              <div>
+                <h2>{detalheAluno.aluno.nome}</h2>
+                <span>
+                  NÂº {detalheAluno.aluno.numero_chamada ?? "-"} - Dia {detalheAluno.dia}
+                </span>
+              </div>
+
+              <button className="botao-fechar" type="button" onClick={() => setDetalheAluno(null)}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="modal-acoes">
+              {[1, 2].map((diaOpcao) => {
+                const resultadoDia = obterResultadoDia(
+                  resultadosPorAluno[String(detalheAluno.aluno.id)],
+                  diaOpcao
+                );
+
+                return (
+                  <button
+                    key={diaOpcao}
+                    className={detalheAluno.dia === diaOpcao ? "botao-dia ativo" : "botao-dia"}
+                    type="button"
+                    disabled={!resultadoDia || carregandoDetalheAluno}
+                    onClick={() => abrirDetalheAluno(detalheAluno.aluno, diaOpcao, true)}
+                  >
+                    Dia {diaOpcao}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="resumo-correcao">
+              <div>
+                <strong>Acertos</strong>
+                <span>
+                  {detalheAluno.dados.acertos ?? 0}/{detalheAluno.dados.total_questoes ?? 0}
+                </span>
+              </div>
+              <div>
+                <strong>Nota do dia</strong>
+                <span>{detalheAluno.dados.nota_dia ?? "-"}</span>
+              </div>
+              <div>
+                <strong>Nota global</strong>
+                <span>{detalheAluno.dados.nota_global ?? "-"}</span>
+              </div>
+              <div>
+                <strong>Gabarito</strong>
+                <span>{detalheAluno.dados.codigo_gabarito || "-"}</span>
+              </div>
+            </div>
+
+            <div className="modal-acoes">
+              <button
+                type="button"
+                onClick={() =>
+                  editarNotaAluno(
+                    detalheAluno.aluno,
+                    detalheAluno.dia,
+                    detalheAluno.dados.nota_dia
+                  )
+                }
+              >
+                Editar nota
+              </button>
+              <button className="botao-perigo" type="button" onClick={excluirCorrecaoAluno}>
+                Excluir correcao
+              </button>
+            </div>
+
+            {detalheAluno.dados.respostas_salvas?.length > 0 ? (
+              <div className="respostas-lidas">
+                <h3>Respostas e gabarito</h3>
+
+                <div className="respostas-lidas-grid">
+                  {detalheAluno.dados.respostas_salvas.map((resposta) => (
+                    <span
+                      key={resposta.numero_questao}
+                      className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
+                    >
+                      {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="texto-vazio">Nota lancada manualmente, sem respostas salvas.</p>
+            )}
+          </section>
+        </div>
       )}
 
       <footer className="rodape-sistema">

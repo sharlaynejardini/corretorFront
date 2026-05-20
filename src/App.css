@@ -387,6 +387,10 @@ tbody tr:hover td {
   background: #f5f9ff;
 }
 
+tbody tr.linha-clicavel {
+  cursor: pointer;
+}
+
 tbody tr:last-child td {
   border-bottom: none;
 }
@@ -468,6 +472,124 @@ tbody tr:last-child td {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
+}
+
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.modal-correcao {
+  width: min(920px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.modal-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modal-cabecalho h2 {
+  margin: 0 0 4px;
+}
+
+.modal-cabecalho span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.botao-fechar {
+  width: auto;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 8px 12px;
+  background: #e6edf5;
+  color: #24364f;
+}
+
+.botao-fechar:hover {
+  background: #d5e0ec;
+  box-shadow: none;
+}
+
+.modal-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.modal-acoes button {
+  width: auto;
+  min-width: 128px;
+}
+
+.botao-dia {
+  min-width: 92px;
+  background: #e6edf5;
+  color: #24364f;
+  box-shadow: none;
+}
+
+.botao-dia.ativo {
+  background: var(--primary);
+  color: white;
+}
+
+.botao-perigo {
+  background: var(--danger);
+}
+
+.botao-perigo:hover {
+  background: #8f1d13;
+  box-shadow: 0 8px 18px rgba(180, 35, 24, 0.16);
+}
+
+.resumo-correcao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.resumo-correcao div {
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.resumo-correcao strong,
+.resumo-correcao span {
+  display: block;
+}
+
+.resumo-correcao strong {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.resumo-correcao span {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .resultado-disciplinas {
