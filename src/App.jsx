@@ -414,6 +414,49 @@ function App() {
     }
   }
 
+  async function editarAcertosAluno(aluno, diaNota, acertosAtuais, totalQuestoes) {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    const valor = prompt(
+      `Informe a nova quantidade de acertos do Dia ${diaNota} para ${aluno.nome}`,
+      acertosAtuais !== null && acertosAtuais !== undefined ? String(acertosAtuais) : ""
+    );
+
+    if (valor === null) return;
+
+    const acertos = Number(valor);
+    if (!Number.isInteger(acertos) || acertos < 0 || acertos > totalQuestoes) {
+      alert(`Informe um numero inteiro entre 0 e ${totalQuestoes}.`);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", aluno.id);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", diaNota);
+      formData.append("acertos", acertos);
+
+      await api.patch("/acertos-aluno", formData);
+      await carregarResultadosSalvos(turmaId);
+      await abrirDetalheAluno(aluno, diaNota, true);
+
+      if (String(alunoId) === String(aluno.id) && Number(dia) === Number(diaNota)) {
+        await carregarCorrecaoAlunoSelecionado();
+      }
+
+      alert("Acertos atualizados com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao editar acertos.");
+    }
+  }
+
   async function carregarDisciplinasDia(diaNota) {
     if (diaNota === dia && disciplinasModelo.length > 0) {
       return disciplinasModelo;
@@ -1481,6 +1524,19 @@ function App() {
                 }
               >
                 Editar nota
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editarAcertosAluno(
+                    detalheAluno.aluno,
+                    detalheAluno.dia,
+                    detalheAluno.dados.acertos,
+                    detalheAluno.dados.total_questoes
+                  )
+                }
+              >
+                Editar acertos
               </button>
               <button
                 type="button"
