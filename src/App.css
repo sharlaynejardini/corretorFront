@@ -458,6 +458,20 @@ tbody tr:last-child td {
   color: var(--muted);
 }
 
+.botao-adaptada {
+  width: auto;
+  min-height: 30px;
+  margin-left: 8px;
+  padding: 5px 9px;
+  background: #24364f;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.botao-adaptada:hover {
+  background: #172033;
+}
+
 .nota-editavel {
   display: inline-grid;
   grid-template-columns: minmax(32px, auto) auto;

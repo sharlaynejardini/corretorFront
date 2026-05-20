@@ -407,6 +407,75 @@ function App() {
     }
   }
 
+  async function carregarDisciplinasDia(diaNota) {
+    if (diaNota === dia && disciplinasModelo.length > 0) {
+      return disciplinasModelo;
+    }
+
+    const response = await api.get("/modelo-prova", {
+      params: { escola_id: escolaId, bimestre, dia: diaNota },
+    });
+
+    return response.data.disciplinas || [];
+  }
+
+  async function salvarProvaAdaptada(aluno, diaNota = dia) {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    try {
+      const disciplinas = await carregarDisciplinasDia(diaNota);
+
+      if (disciplinas.length === 0) {
+        alert("Modelo de prova nao encontrado para esse dia.");
+        return;
+      }
+
+      const acertosDisciplinas = {};
+
+      for (const disciplina of disciplinas) {
+        const valor = prompt(
+          `Acertos em ${disciplina.disciplina} (${disciplina.quantidade_questoes} questoes) - ${aluno.nome}`,
+          "0"
+        );
+
+        if (valor === null) return;
+
+        const acertos = Number(valor.replace(",", "."));
+        if (!Number.isInteger(acertos) || acertos < 0 || acertos > disciplina.quantidade_questoes) {
+          alert(`Informe um numero inteiro entre 0 e ${disciplina.quantidade_questoes}.`);
+          return;
+        }
+
+        acertosDisciplinas[disciplina.disciplina] = acertos;
+      }
+
+      const formData = new FormData();
+
+      formData.append("aluno_id", aluno.id);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", diaNota);
+      formData.append("acertos_disciplinas", JSON.stringify(acertosDisciplinas));
+
+      const response = await api.patch("/nota-adaptada", formData);
+
+      atualizarPlanilha(response.data);
+      await carregarResultadosSalvos(turmaId);
+
+      if (detalheAluno?.aluno?.id === aluno.id && detalheAluno?.dia === diaNota) {
+        await abrirDetalheAluno(aluno, diaNota, true);
+      }
+
+      alert("Prova adaptada salva com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao salvar prova adaptada.");
+    }
+  }
+
   async function abrirDetalheAluno(aluno, diaDetalhe = dia, forcar = false) {
     const resultadoAluno = resultadosPorAluno[String(aluno.id)];
     const resultadoDia = obterResultadoDia(resultadoAluno, diaDetalhe);
@@ -661,6 +730,16 @@ function App() {
                       <span className={temAcertos ? "status corrigido" : "status pendente"}>
                         {temAcertos ? "Corrigido" : "Pendente"}
                       </span>
+                      <button
+                        className="botao-adaptada"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          salvarProvaAdaptada(aluno, dia);
+                        }}
+                      >
+                        Adaptada
+                      </button>
                     </td>
                   </tr>
                 );
@@ -1063,6 +1142,16 @@ function App() {
                             <span className={temAcertos ? "status corrigido" : "status pendente"}>
                               {temAcertos ? "Corrigido" : "Pendente"}
                             </span>
+                            <button
+                              className="botao-adaptada"
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                salvarProvaAdaptada(aluno, dia);
+                              }}
+                            >
+                              Adaptada
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1260,6 +1349,12 @@ function App() {
                 }
               >
                 Editar nota
+              </button>
+              <button
+                type="button"
+                onClick={() => salvarProvaAdaptada(detalheAluno.aluno, detalheAluno.dia)}
+              >
+                Adaptada por disciplina
               </button>
               <button className="botao-perigo" type="button" onClick={excluirCorrecaoAluno}>
                 Excluir correcao
