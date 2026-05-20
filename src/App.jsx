@@ -457,6 +457,51 @@ function App() {
     }
   }
 
+  async function editarGabaritoAluno(aluno, diaNota, dadosCorrecao) {
+    const respostasAtuais = dadosCorrecao?.respostas_salvas || [];
+
+    if (respostasAtuais.length === 0) {
+      alert("Este aluno nao tem respostas salvas para editar.");
+      return;
+    }
+
+    const respostasTexto = respostasAtuais
+      .map((resposta) => resposta.resposta_aluno || "")
+      .join(",");
+    const valor = prompt(
+      `Edite as respostas do Dia ${diaNota} para ${aluno.nome}`,
+      respostasTexto
+    );
+
+    if (valor === null) return;
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", aluno.id);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", diaNota);
+      formData.append("respostas", valor.toUpperCase());
+
+      const response = await api.post("/corrigir-manual", formData);
+
+      setResultado(response.data);
+      atualizarPlanilha(response.data);
+      await carregarResultadosSalvos(turmaId);
+      await abrirDetalheAluno(aluno, diaNota, true);
+
+      if (String(alunoId) === String(aluno.id) && Number(dia) === Number(diaNota)) {
+        await carregarCorrecaoAlunoSelecionado();
+      }
+
+      alert("Respostas do aluno atualizadas com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao editar respostas do aluno.");
+    }
+  }
+
   async function carregarDisciplinasDia(diaNota) {
     if (diaNota === dia && disciplinasModelo.length > 0) {
       return disciplinasModelo;
@@ -1537,6 +1582,18 @@ function App() {
                 }
               >
                 Editar acertos
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  editarGabaritoAluno(
+                    detalheAluno.aluno,
+                    detalheAluno.dia,
+                    detalheAluno.dados
+                  )
+                }
+              >
+                Editar respostas
               </button>
               <button
                 type="button"
