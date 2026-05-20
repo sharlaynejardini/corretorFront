@@ -42,6 +42,8 @@ function App() {
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
   const [detalheAluno, setDetalheAluno] = useState(null);
   const [carregandoDetalheAluno, setCarregandoDetalheAluno] = useState(false);
+  const [correcaoAlunoAtual, setCorrecaoAlunoAtual] = useState(null);
+  const [carregandoCorrecaoAlunoAtual, setCarregandoCorrecaoAlunoAtual] = useState(false);
   const [gabaritoOficial, setGabaritoOficial] = useState({});
   const [mensagemGabarito, setMensagemGabarito] = useState("");
 
@@ -58,6 +60,10 @@ function App() {
       carregarResultadosSalvos(turmaId);
     }
   }, [escolaId, turmaId, bimestre, dia]);
+
+  useEffect(() => {
+    carregarCorrecaoAlunoSelecionado();
+  }, [alunoId, escolaId, bimestre, dia, resultadosPorAluno]);
 
   const questoesModelo = useMemo(() => {
     let numeroQuestao = 1;
@@ -314,6 +320,7 @@ function App() {
       setAlunos(response.data);
       setResultadosPorAluno({});
       setDetalheAluno(null);
+      setCorrecaoAlunoAtual(null);
       await carregarResultadosSalvos(idTurma);
     } catch (error) {
       console.error(error);
@@ -511,11 +518,51 @@ function App() {
     }
   }
 
-  async function excluirCorrecaoAluno() {
-    if (!detalheAluno) return;
+  async function carregarCorrecaoAlunoSelecionado() {
+    if (!alunoId || !escolaId) {
+      setCorrecaoAlunoAtual(null);
+      return;
+    }
+
+    const resultadoAluno = resultadosPorAluno[String(alunoId)];
+    const resultadoDia = obterResultadoDia(resultadoAluno, dia);
+
+    if (!resultadoDia) {
+      setCorrecaoAlunoAtual(null);
+      return;
+    }
+
+    setCarregandoCorrecaoAlunoAtual(true);
+
+    try {
+      const response = await api.get("/respostas-aluno", {
+        params: {
+          aluno_id: alunoId,
+          escola_id: escolaId,
+          bimestre,
+          dia,
+        },
+      });
+
+      setCorrecaoAlunoAtual(response.data);
+    } catch (error) {
+      console.error(error);
+      setCorrecaoAlunoAtual(null);
+    } finally {
+      setCarregandoCorrecaoAlunoAtual(false);
+    }
+  }
+
+  async function excluirCorrecaoAluno(alvo = detalheAluno) {
+    if (!alvo) return;
+
+    const alunoAlvo = alvo.aluno || alunos.find((aluno) => String(aluno.id) === String(alvo.aluno_id));
+    const diaAlvo = alvo.dia ?? dia;
+
+    if (!alunoAlvo) return;
 
     const confirmado = window.confirm(
-      `Excluir a correcao do Dia ${detalheAluno.dia} de ${detalheAluno.aluno.nome}?`
+      `Excluir a correcao do Dia ${diaAlvo} de ${alunoAlvo.nome}?`
     );
 
     if (!confirmado) return;
@@ -523,14 +570,19 @@ function App() {
     try {
       await api.delete("/correcao-aluno", {
         params: {
-          aluno_id: detalheAluno.aluno.id,
+          aluno_id: alunoAlvo.id,
           escola_id: escolaId,
           bimestre,
-          dia: detalheAluno.dia,
+          dia: diaAlvo,
         },
       });
 
-      setDetalheAluno(null);
+      if (detalheAluno?.aluno?.id === alunoAlvo.id && detalheAluno?.dia === diaAlvo) {
+        setDetalheAluno(null);
+      }
+      if (String(alunoId) === String(alunoAlvo.id) && Number(dia) === Number(diaAlvo)) {
+        setCorrecaoAlunoAtual(null);
+      }
       await carregarResultadosSalvos(turmaId);
       alert("Correcao excluida com sucesso!");
     } catch (error) {
@@ -617,6 +669,7 @@ function App() {
     setResultado(null);
     setResultadosPorAluno({});
     setDetalheAluno(null);
+    setCorrecaoAlunoAtual(null);
     carregarTurmas(idEscola);
   }
 
@@ -848,6 +901,7 @@ function App() {
               onChange={(e) => {
                 setBimestre(e.target.value);
                 setResultado(null);
+                setCorrecaoAlunoAtual(null);
               }}
             >
               <option value={1}>1º Bimestre</option>
@@ -869,6 +923,7 @@ function App() {
                   setCodigoGabarito("PADRAO");
                 }
                 setResultado(null);
+                setCorrecaoAlunoAtual(null);
               }}
             >
               <option value={1}>Dia 1</option>
@@ -989,6 +1044,7 @@ function App() {
                     setAlunos([]);
                     setResultado(null);
                     setResultadosPorAluno({});
+                    setCorrecaoAlunoAtual(null);
                     carregarAlunos(e.target.value);
                   }}
                 >
@@ -1010,6 +1066,7 @@ function App() {
                   onChange={(e) => {
                     setAlunoId(e.target.value);
                     setResultado(null);
+                    setCorrecaoAlunoAtual(null);
                   }}
                 >
                   <option value="">Selecione</option>
@@ -1037,6 +1094,81 @@ function App() {
                 />
               </div>
             </div>
+
+            {carregandoCorrecaoAlunoAtual && (
+              <p className="texto-vazio">Carregando correcao salva...</p>
+            )}
+
+            {correcaoAlunoAtual && (
+              <div className="correcao-existente">
+                <div className="correcao-existente-cabecalho">
+                  <div>
+                    <strong>Correcao ja salva para este aluno</strong>
+                    <span>Dia {correcaoAlunoAtual.dia} - {bimestre}Âº bimestre</span>
+                  </div>
+
+                  <div className="correcao-existente-acoes">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const alunoSelecionado = alunos.find(
+                          (aluno) => String(aluno.id) === String(alunoId)
+                        );
+                        if (alunoSelecionado) {
+                          abrirDetalheAluno(alunoSelecionado, dia, true);
+                        }
+                      }}
+                    >
+                      Ver detalhes
+                    </button>
+                    <button
+                      className="botao-perigo"
+                      type="button"
+                      onClick={() => excluirCorrecaoAluno(correcaoAlunoAtual)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+
+                <div className="resumo-correcao resumo-correcao-compacto">
+                  <div>
+                    <strong>Acertos</strong>
+                    <span>{correcaoAlunoAtual.acertos ?? 0}/{correcaoAlunoAtual.total_questoes ?? 0}</span>
+                  </div>
+                  <div>
+                    <strong>Nota do dia</strong>
+                    <span>{correcaoAlunoAtual.nota_dia ?? "-"}</span>
+                  </div>
+                  <div>
+                    <strong>Nota global</strong>
+                    <span>{correcaoAlunoAtual.nota_global ?? "-"}</span>
+                  </div>
+                  <div>
+                    <strong>Gabarito</strong>
+                    <span>{correcaoAlunoAtual.codigo_gabarito || "-"}</span>
+                  </div>
+                </div>
+
+                {correcaoAlunoAtual.respostas_salvas?.length > 0 ? (
+                  <div className="respostas-lidas respostas-lidas-compactas">
+                    <h3>Respostas e gabarito</h3>
+                    <div className="respostas-lidas-grid">
+                      {correcaoAlunoAtual.respostas_salvas.map((resposta) => (
+                        <span
+                          key={resposta.numero_questao}
+                          className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
+                        >
+                          {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta || "-"}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="texto-vazio">Nota lancada manualmente, sem respostas salvas.</p>
+                )}
+              </div>
+            )}
 
             <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
 

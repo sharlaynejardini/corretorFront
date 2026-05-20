@@ -574,6 +574,52 @@ tbody tr:last-child td {
   box-shadow: 0 8px 18px rgba(180, 35, 24, 0.16);
 }
 
+.correcao-existente {
+  margin: 4px 0 18px;
+  padding: 16px;
+  background: #f8fbff;
+  border: 1px solid #bdd7ff;
+  border-radius: 8px;
+}
+
+.correcao-existente-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.correcao-existente-cabecalho strong,
+.correcao-existente-cabecalho span {
+  display: block;
+}
+
+.correcao-existente-cabecalho strong {
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.correcao-existente-cabecalho span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.correcao-existente-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.correcao-existente-acoes button {
+  width: auto;
+  min-width: 98px;
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
 .resumo-correcao {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -604,6 +650,23 @@ tbody tr:last-child td {
   color: var(--text);
   font-size: 18px;
   font-weight: 800;
+}
+
+.resumo-correcao-compacto {
+  margin-bottom: 12px;
+}
+
+.respostas-lidas-compactas {
+  margin-top: 10px;
+}
+
+.respostas-lidas-compactas .respostas-lidas-grid {
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+}
+
+.respostas-lidas-compactas .respostas-lidas-grid span {
+  padding: 7px 8px;
+  font-size: 12px;
 }
 
 .resultado-disciplinas {
