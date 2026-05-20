@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
 import "./App.css";
 
-const ALTERNATIVAS = ["A", "B", "C", "D"];
+const ALTERNATIVAS = ["A", "B", "C", "D", "X"];
 const SERIES = [5, 6, 7, 8, 9];
 const GRUPOS_GABARITO = [
   { codigo: "PADRAO", nome: "Padrao" },
