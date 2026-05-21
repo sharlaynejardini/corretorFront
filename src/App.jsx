@@ -4,6 +4,42 @@ import "./App.css";
 
 const ALTERNATIVAS = ["A", "B", "C", "D", "X"];
 const SERIES = [5, 6, 7, 8, 9];
+const CORES_DISCIPLINAS = {
+  LP: "#4285f4",
+  "Lingua Portuguesa": "#4285f4",
+  "Língua Portuguesa": "#4285f4",
+  Portugues: "#4285f4",
+  Português: "#4285f4",
+  His: "#fbbc04",
+  Historia: "#fbbc04",
+  História: "#fbbc04",
+  Geo: "#34a853",
+  Geografia: "#34a853",
+  EF: "#ff7043",
+  "Educacao Fisica": "#ff7043",
+  "Educação Física": "#ff7043",
+  Mat: "#a142f4",
+  Matematica: "#a142f4",
+  Matemática: "#a142f4",
+  Cie: "#00acc1",
+  Ciencias: "#00acc1",
+  Ciências: "#00acc1",
+  Artes: "#ec407a",
+  Ingles: "#7cb342",
+  Inglês: "#7cb342",
+};
+const PALETA_DISCIPLINAS = [
+  "#4285f4",
+  "#fbbc04",
+  "#34a853",
+  "#ff7043",
+  "#a142f4",
+  "#00acc1",
+  "#ec407a",
+  "#7cb342",
+  "#5c6bc0",
+  "#8d6e63",
+];
 const GRUPOS_GABARITO = [
   { codigo: "PADRAO", nome: "Padrao" },
   { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
@@ -70,10 +106,10 @@ function App() {
   }, [alunoId, escolaId, bimestre, dia, resultadosPorAluno]);
 
   useEffect(() => {
-    if (paginaAtual === "analise" && escolaId && turmaId && turmas.length > 0) {
+    if (paginaAtual === "analise" && escolaId && turmas.length > 0) {
       carregarComparacaoTurmas();
     }
-  }, [paginaAtual, escolaId, turmaId, bimestre, turmas]);
+  }, [paginaAtual, escolaId, bimestre, turmas]);
 
   const questoesModelo = useMemo(() => {
     let numeroQuestao = 1;
@@ -132,6 +168,31 @@ function App() {
   function extrairSerieTurma(nomeTurma = "") {
     const digitos = String(nomeTurma).replace(/\D/g, "");
     return digitos ? Number(digitos) : null;
+  }
+
+  function normalizarDisciplina(disciplina = "") {
+    return String(disciplina)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  function obterCorDisciplina(disciplina = "") {
+    if (CORES_DISCIPLINAS[disciplina]) return CORES_DISCIPLINAS[disciplina];
+
+    const disciplinaNormalizada = normalizarDisciplina(disciplina);
+    const chaveEncontrada = Object.keys(CORES_DISCIPLINAS).find(
+      (chave) => normalizarDisciplina(chave) === disciplinaNormalizada
+    );
+
+    if (chaveEncontrada) return CORES_DISCIPLINAS[chaveEncontrada];
+
+    const somaCaracteres = Array.from(disciplinaNormalizada).reduce(
+      (soma, caractere) => soma + caractere.charCodeAt(0),
+      0
+    );
+
+    return PALETA_DISCIPLINAS[somaCaracteres % PALETA_DISCIPLINAS.length];
   }
 
   function obterResultadoDia(resultadoAluno, diaResultado) {
@@ -368,23 +429,16 @@ function App() {
   }
 
   async function carregarComparacaoTurmas() {
-    const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
-    const serieSelecionada = extrairSerieTurma(turmaSelecionada?.nome);
-
-    if (!serieSelecionada) {
+    if (!escolaId || turmas.length === 0) {
       setComparacaoTurmas([]);
       return;
     }
-
-    const turmasMesmoAno = turmas.filter(
-      (turma) => extrairSerieTurma(turma.nome) === serieSelecionada
-    );
 
     setCarregandoComparacaoTurmas(true);
 
     try {
       const comparacoes = await Promise.all(
-        turmasMesmoAno.map(async (turma) => {
+        turmas.map(async (turma) => {
           const [alunosResponse, resultadosResponse] = await Promise.all([
             api.get(`/alunos/${turma.id}`),
             api
@@ -414,7 +468,9 @@ function App() {
         })
       );
 
-      setComparacaoTurmas(comparacoes);
+      setComparacaoTurmas(
+        comparacoes.sort((a, b) => a.turma.nome.localeCompare(b.turma.nome))
+      );
     } catch (error) {
       console.error(error);
       setComparacaoTurmas([]);
@@ -831,6 +887,8 @@ function App() {
     setAlunos([]);
     setResultado(null);
     setResultadosPorAluno({});
+    setComparacaoTurmas([]);
+    setCarregandoComparacaoTurmas(false);
     setDetalheAluno(null);
     setCorrecaoAlunoAtual(null);
     carregarTurmas(idEscola);
@@ -1030,10 +1088,6 @@ function App() {
     );
   }
 
-  function obterAnaliseTurma() {
-    return calcularResumoTurma(null, alunos, resultadosPorAluno);
-  }
-
   function calcularResumoTurma(turma, alunosTurma, resultadosTurma) {
     const totaisDisciplinas = {};
     let somaGeral = 0;
@@ -1082,12 +1136,28 @@ function App() {
   }
 
   function renderizarAnaliseDados() {
-    if (alunos.length === 0) {
-      return <p className="texto-vazio">Selecione uma turma para ver a analise de dados.</p>;
+    if (!escolaId) {
+      return <p className="texto-vazio">Selecione uma escola para ver a analise de dados.</p>;
     }
 
-    const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
-    const { mediasDisciplinas, mediaGeral, alunosComNotaGeral } = obterAnaliseTurma();
+    if (carregandoComparacaoTurmas) {
+      return <p className="texto-vazio">Carregando graficos da escola...</p>;
+    }
+
+    if (comparacaoTurmas.length === 0) {
+      return <p className="texto-vazio">Ainda nao ha turmas com dados para esta escola.</p>;
+    }
+
+    const escolaSelecionada = escolas.find((escola) => String(escola.id) === String(escolaId));
+    const turmasComNota = comparacaoTurmas.filter((resumo) => Number.isFinite(resumo.mediaGeral));
+    const mediaGeralEscola = turmasComNota.length
+      ? turmasComNota.reduce((soma, resumo) => soma + resumo.mediaGeral, 0) / turmasComNota.length
+      : null;
+    const totalAlunos = comparacaoTurmas.reduce((total, resumo) => total + resumo.totalAlunos, 0);
+    const totalAlunosComNota = comparacaoTurmas.reduce(
+      (total, resumo) => total + resumo.alunosComNotaGeral,
+      0
+    );
     const disciplinasComparacao = Array.from(
       new Set(
         comparacaoTurmas.flatMap((turma) =>
@@ -1095,148 +1165,146 @@ function App() {
         )
       )
     ).sort((a, b) => a.localeCompare(b));
+    const turmasPorAno = comparacaoTurmas.reduce((grupos, resumo) => {
+      const serie = extrairSerieTurma(resumo.turma.nome) || "Sem ano";
+      grupos[serie] = grupos[serie] || [];
+      grupos[serie].push(resumo);
+      return grupos;
+    }, {});
 
     return (
       <div className="analise-dados">
         <div className="resultado-resumo">
           <div>
-            <strong>Turma</strong>
-            <span>{turmaSelecionada?.nome || "-"}</span>
+            <strong>Escola</strong>
+            <span>{escolaSelecionada?.nome || "-"}</span>
           </div>
           <div>
             <strong>Media geral</strong>
-            <span>{formatarMedia(mediaGeral)}</span>
+            <span>{formatarMedia(mediaGeralEscola)}</span>
           </div>
           <div>
             <strong>Alunos com nota</strong>
-            <span>{alunosComNotaGeral}/{alunos.length}</span>
+            <span>{totalAlunosComNota}/{totalAlunos}</span>
           </div>
         </div>
 
-        {mediasDisciplinas.length === 0 ? (
-          <p className="texto-vazio">Ainda nao ha notas por disciplina para esta turma.</p>
-        ) : (
-          <>
-            <div className="analise-grid">
-              {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
-                <div className="analise-card" key={disciplina}>
-                  <strong>{disciplina}</strong>
-                  <span>{formatarMedia(media)}</span>
-                  <small>{quantidade} aluno(s) com nota</small>
+        <div className="graficos-turmas-grid">
+          {comparacaoTurmas.map((resumo) => (
+            <div className="grafico-sala" key={resumo.turma.id}>
+              <h3>{resumo.turma.nome}</h3>
+
+              {resumo.mediasDisciplinas.length === 0 ? (
+                <p className="texto-vazio">Sem notas por disciplina.</p>
+              ) : (
+                <div className="grafico-disciplinas">
+                  {resumo.mediasDisciplinas.map(({ disciplina, media }) => (
+                    <div className="disciplina-coluna" key={disciplina}>
+                      <div className="disciplina-coluna-trilho">
+                        <span
+                          style={{
+                            background: obterCorDisciplina(disciplina),
+                            height: `${Math.max(4, ((media || 0) / 10) * 100)}%`,
+                          }}
+                        >
+                          {formatarMedia(media)}
+                        </span>
+                      </div>
+                      <small>{disciplina}</small>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="comparacao-turmas">
+          <div className="planilha-cabecalho">
+            <h2>Media global por sala</h2>
+            <span>{comparacaoTurmas.length} turma(s)</span>
+          </div>
+
+          <div className="grafico-bloco grafico-global">
+            <div className="grafico-colunas">
+              {comparacaoTurmas.map((resumo) => (
+                <div className="coluna-item" key={resumo.turma.id}>
+                  <div className="coluna-trilho">
+                    <span
+                      style={{
+                        height: `${Math.max(4, ((resumo.mediaGeral || 0) / 10) * 100)}%`,
+                      }}
+                    >
+                      {formatarMedia(resumo.mediaGeral)}
+                    </span>
+                  </div>
+                  <small>{resumo.turma.nome}</small>
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="grafico-bloco">
-              <h3>Media por disciplina</h3>
-              <div className="grafico-barras">
-                {mediasDisciplinas.map(({ disciplina, media }) => (
-                  <div className="barra-linha" key={disciplina}>
-                    <strong>{disciplina}</strong>
-                    <div className="barra-trilho">
-                      <span style={{ width: `${Math.max(4, (media / 10) * 100)}%` }} />
-                    </div>
-                    <em>{formatarMedia(media)}</em>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className="tabela-wrapper tabela-analise-wrapper">
-          <table className="tabela-analise">
-            <thead>
-              <tr>
-                <th>Disciplina</th>
-                <th>Media da turma</th>
-                <th>Alunos considerados</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
-                <tr key={disciplina}>
-                  <td>{disciplina}</td>
-                  <td className="nota-global">{formatarMedia(media)}</td>
-                  <td>{quantidade}</td>
+          <div className="tabela-wrapper tabela-analise-wrapper">
+            <table className="tabela-comparacao">
+              <thead>
+                <tr>
+                  <th>Turma</th>
+                  <th>Media geral</th>
+                  {disciplinasComparacao.map((disciplina) => (
+                    <th key={disciplina}>{disciplina}</th>
+                  ))}
+                  <th>Alunos considerados</th>
                 </tr>
-              ))}
-              <tr className="linha-media-geral">
-                <td>Media geral da turma</td>
-                <td className="nota-global">{formatarMedia(mediaGeral)}</td>
-                <td>{alunosComNotaGeral}</td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {comparacaoTurmas.map((resumo) => (
+                  <tr key={resumo.turma.id}>
+                    <td>{resumo.turma.nome}</td>
+                    <td className="nota-global">{formatarMedia(resumo.mediaGeral)}</td>
+                    {disciplinasComparacao.map((disciplina) => {
+                      const mediaDisciplina = resumo.mediasDisciplinas.find(
+                        (item) => item.disciplina === disciplina
+                      );
+
+                      return <td key={disciplina}>{formatarMedia(mediaDisciplina?.media)}</td>;
+                    })}
+                    <td>{resumo.alunosComNotaGeral}/{resumo.totalAlunos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="comparacao-turmas">
           <div className="planilha-cabecalho">
             <h2>Comparacao entre turmas do mesmo ano</h2>
-            <span>{carregandoComparacaoTurmas ? "Carregando..." : `${comparacaoTurmas.length} turma(s)`}</span>
+            <span>Agrupado por ano</span>
           </div>
 
-          {carregandoComparacaoTurmas ? (
-            <p className="texto-vazio">Carregando medias das turmas...</p>
-          ) : comparacaoTurmas.length === 0 ? (
-            <p className="texto-vazio">Selecione uma turma com ano identificado no nome.</p>
-          ) : (
-            <>
-              <div className="grafico-bloco">
-                <h3>Media geral por turma</h3>
+          <div className="comparacao-anos">
+            {Object.entries(turmasPorAno).map(([serie, resumos]) => (
+              <div className="grafico-bloco" key={serie}>
+                <h3>{serie === "Sem ano" ? "Sem ano identificado" : `${serie}º ano`}</h3>
                 <div className="grafico-colunas">
-                  {comparacaoTurmas.map((resumo) => (
+                  {resumos.map((resumo) => (
                     <div className="coluna-item" key={resumo.turma.id}>
                       <div className="coluna-trilho">
                         <span
                           style={{
                             height: `${Math.max(4, ((resumo.mediaGeral || 0) / 10) * 100)}%`,
                           }}
-                        />
+                        >
+                          {formatarMedia(resumo.mediaGeral)}
+                        </span>
                       </div>
-                      <strong>{formatarMedia(resumo.mediaGeral)}</strong>
                       <small>{resumo.turma.nome}</small>
                     </div>
                   ))}
                 </div>
               </div>
-
-              <div className="tabela-wrapper tabela-analise-wrapper">
-                <table className="tabela-comparacao">
-                  <thead>
-                    <tr>
-                      <th>Turma</th>
-                      <th>Media geral</th>
-                      {disciplinasComparacao.map((disciplina) => (
-                        <th key={disciplina}>{disciplina}</th>
-                      ))}
-                      <th>Alunos considerados</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparacaoTurmas.map((resumo) => (
-                      <tr key={resumo.turma.id}>
-                        <td>{resumo.turma.nome}</td>
-                        <td className="nota-global">{formatarMedia(resumo.mediaGeral)}</td>
-                        {disciplinasComparacao.map((disciplina) => {
-                          const mediaDisciplina = resumo.mediasDisciplinas.find(
-                            (item) => item.disciplina === disciplina
-                          );
-
-                          return (
-                            <td key={disciplina}>
-                              {formatarMedia(mediaDisciplina?.media)}
-                            </td>
-                          );
-                        })}
-                        <td>{resumo.alunosComNotaGeral}/{resumo.totalAlunos}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -1862,32 +1930,6 @@ function App() {
           <div className="planilha-cabecalho">
             <h2>Analise de dados</h2>
             <span>{bimestre}Âº bimestre</span>
-          </div>
-
-          <div className="grade-controles">
-            <div className="campo">
-              <label>Turma</label>
-
-              <select
-                value={turmaId}
-                onChange={(e) => {
-                  setTurmaId(e.target.value);
-                  setAlunoId("");
-                  setAlunos([]);
-                  setResultado(null);
-                  setResultadosPorAluno({});
-                  carregarAlunos(e.target.value);
-                }}
-              >
-                <option value="">Selecione</option>
-
-                {turmas.map((turma) => (
-                  <option key={turma.id} value={turma.id}>
-                    {turma.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {renderizarAnaliseDados()}
