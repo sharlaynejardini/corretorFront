@@ -98,7 +98,7 @@ h2 {
 
 .navegacao {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 24px;
 }
@@ -324,6 +324,66 @@ textarea {
 
 .resultado-filtros .campo {
   margin-bottom: 0;
+}
+
+.analise-dados {
+  margin-top: 24px;
+}
+
+.analise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.analise-card {
+  min-height: 130px;
+  padding: 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.analise-card strong,
+.analise-card span,
+.analise-card small {
+  display: block;
+}
+
+.analise-card strong {
+  min-height: 38px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.analise-card span {
+  margin: 14px 0 8px;
+  color: var(--primary);
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.analise-card small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tabela-analise-wrapper {
+  margin-top: 16px;
+}
+
+.tabela-analise {
+  min-width: 620px;
+}
+
+.linha-media-geral td {
+  background: #f3f6fa;
+  color: var(--text);
+  font-weight: 800;
 }
 
 .planilha-cabecalho {

@@ -117,6 +117,10 @@ function App() {
     return dados?.nota_dia ?? null;
   }
 
+  function formatarMedia(valor) {
+    return Number.isFinite(valor) ? valor.toFixed(1).replace(".", ",") : "-";
+  }
+
   function obterResultadoDia(resultadoAluno, diaResultado) {
     return (
       resultadoAluno?.resultadosDias?.[diaResultado] ??
@@ -957,6 +961,119 @@ function App() {
     );
   }
 
+  function obterAnaliseTurma() {
+    const totaisDisciplinas = {};
+    let somaGeral = 0;
+    let alunosComNotaGeral = 0;
+
+    alunos.forEach((aluno) => {
+      const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+      if (!resultadoAluno) return;
+
+      const notaGeral = extrairNota(resultadoAluno);
+      const notaGeralNumero = Number(notaGeral);
+      if (Number.isFinite(notaGeralNumero)) {
+        somaGeral += notaGeralNumero;
+        alunosComNotaGeral += 1;
+      }
+
+      Object.entries(resultadoAluno.disciplinas || {}).forEach(([disciplina, resumo]) => {
+        const notaDisciplina = resumo?.nota;
+        const notaDisciplinaNumero = Number(notaDisciplina);
+        if (!Number.isFinite(notaDisciplinaNumero)) return;
+
+        if (!totaisDisciplinas[disciplina]) {
+          totaisDisciplinas[disciplina] = { soma: 0, quantidade: 0 };
+        }
+
+        totaisDisciplinas[disciplina].soma += notaDisciplinaNumero;
+        totaisDisciplinas[disciplina].quantidade += 1;
+      });
+    });
+
+    const mediasDisciplinas = Object.entries(totaisDisciplinas)
+      .map(([disciplina, dados]) => ({
+        disciplina,
+        media: dados.quantidade ? dados.soma / dados.quantidade : null,
+        quantidade: dados.quantidade,
+      }))
+      .sort((a, b) => a.disciplina.localeCompare(b.disciplina));
+
+    return {
+      mediasDisciplinas,
+      mediaGeral: alunosComNotaGeral ? somaGeral / alunosComNotaGeral : null,
+      alunosComNotaGeral,
+    };
+  }
+
+  function renderizarAnaliseDados() {
+    if (alunos.length === 0) {
+      return <p className="texto-vazio">Selecione uma turma para ver a analise de dados.</p>;
+    }
+
+    const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
+    const { mediasDisciplinas, mediaGeral, alunosComNotaGeral } = obterAnaliseTurma();
+
+    return (
+      <div className="analise-dados">
+        <div className="resultado-resumo">
+          <div>
+            <strong>Turma</strong>
+            <span>{turmaSelecionada?.nome || "-"}</span>
+          </div>
+          <div>
+            <strong>Media geral</strong>
+            <span>{formatarMedia(mediaGeral)}</span>
+          </div>
+          <div>
+            <strong>Alunos com nota</strong>
+            <span>{alunosComNotaGeral}/{alunos.length}</span>
+          </div>
+        </div>
+
+        {mediasDisciplinas.length === 0 ? (
+          <p className="texto-vazio">Ainda nao ha notas por disciplina para esta turma.</p>
+        ) : (
+          <div className="analise-grid">
+            {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
+              <div className="analise-card" key={disciplina}>
+                <strong>{disciplina}</strong>
+                <span>{formatarMedia(media)}</span>
+                <small>{quantidade} aluno(s) com nota</small>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="tabela-wrapper tabela-analise-wrapper">
+          <table className="tabela-analise">
+            <thead>
+              <tr>
+                <th>Disciplina</th>
+                <th>Media da turma</th>
+                <th>Alunos considerados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
+                <tr key={disciplina}>
+                  <td>{disciplina}</td>
+                  <td className="nota-global">{formatarMedia(media)}</td>
+                  <td>{quantidade}</td>
+                </tr>
+              ))}
+              <tr className="linha-media-geral">
+                <td>Media geral da turma</td>
+                <td className="nota-global">{formatarMedia(mediaGeral)}</td>
+                <td>{alunosComNotaGeral}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   if (!logado) {
     return (
       <main className="login-pagina">
@@ -1025,6 +1142,14 @@ function App() {
           type="button"
         >
           Resultado final
+        </button>
+
+        <button
+          className={paginaAtual === "analise" ? "aba ativa" : "aba"}
+          onClick={() => setPaginaAtual("analise")}
+          type="button"
+        >
+          Analise de dados
         </button>
       </nav>
 
@@ -1561,6 +1686,43 @@ function App() {
           </div>
 
           {renderizarTabelaResultadoFinal()}
+        </section>
+      )}
+
+      {paginaAtual === "analise" && (
+        <section className="secao pagina">
+          <div className="planilha-cabecalho">
+            <h2>Analise de dados</h2>
+            <span>{bimestre}Âº bimestre</span>
+          </div>
+
+          <div className="grade-controles">
+            <div className="campo">
+              <label>Turma</label>
+
+              <select
+                value={turmaId}
+                onChange={(e) => {
+                  setTurmaId(e.target.value);
+                  setAlunoId("");
+                  setAlunos([]);
+                  setResultado(null);
+                  setResultadosPorAluno({});
+                  carregarAlunos(e.target.value);
+                }}
+              >
+                <option value="">Selecione</option>
+
+                {turmas.map((turma) => (
+                  <option key={turma.id} value={turma.id}>
+                    {turma.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {renderizarAnaliseDados()}
         </section>
       )}
 
