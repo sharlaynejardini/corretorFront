@@ -560,7 +560,7 @@ function App() {
 
     const acertos = Number(valor);
     if (!Number.isInteger(acertos) || acertos < 0 || acertos > totalQuestoes) {
-      alert(`Informe um numero inteiro entre 0 e ${totalQuestoes}.`);
+      alert(`Informe um número inteiro entre 0 e ${totalQuestoes}.`);
       return;
     }
 
@@ -663,7 +663,7 @@ function App() {
 
       for (const disciplina of disciplinas) {
         const valor = prompt(
-          `Acertos em ${disciplina.disciplina} (${disciplina.quantidade_questoes} questoes) - ${aluno.nome}`,
+          `Acertos em ${disciplina.disciplina} (${disciplina.quantidade_questoes} questões) - ${aluno.nome}`,
           "0"
         );
 
@@ -671,7 +671,7 @@ function App() {
 
         const acertos = Number(valor.replace(",", "."));
         if (!Number.isInteger(acertos) || acertos < 0 || acertos > disciplina.quantidade_questoes) {
-          alert(`Informe um numero inteiro entre 0 e ${disciplina.quantidade_questoes}.`);
+          alert(`Informe um número inteiro entre 0 e ${disciplina.quantidade_questoes}.`);
           return;
         }
 
@@ -731,7 +731,7 @@ function App() {
       });
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.detail || "Erro ao carregar detalhes da correcao.");
+      alert(error.response?.data?.detail || "Erro ao carregar detalhes da correção.");
     } finally {
       setCarregandoDetalheAluno(false);
     }
@@ -781,7 +781,7 @@ function App() {
     if (!alunoAlvo) return;
 
     const confirmado = window.confirm(
-      `Excluir a correcao do Dia ${diaAlvo} de ${alunoAlvo.nome}?`
+      `Excluir a correção do Dia ${diaAlvo} de ${alunoAlvo.nome}?`
     );
 
     if (!confirmado) return;
@@ -803,10 +803,10 @@ function App() {
         setCorrecaoAlunoAtual(null);
       }
       await carregarResultadosSalvos(turmaId);
-      alert("Correcao excluida com sucesso!");
+      alert("Correção excluída com sucesso!");
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.detail || "Erro ao excluir correcao.");
+      alert(error.response?.data?.detail || "Erro ao excluir correção.");
     }
   }
 
@@ -971,7 +971,7 @@ function App() {
               type="search"
               value={buscaResultado}
               onChange={(event) => setBuscaResultado(event.target.value)}
-              placeholder="Nome ou numero"
+              placeholder="Nome ou número"
             />
           </div>
 
@@ -1137,11 +1137,11 @@ function App() {
 
   function renderizarAnaliseDados() {
     if (!escolaId) {
-      return <p className="texto-vazio">Selecione uma escola para ver a analise de dados.</p>;
+      return <p className="texto-vazio">Selecione uma escola para ver a análise de dados.</p>;
     }
 
     if (carregandoComparacaoTurmas) {
-      return <p className="texto-vazio">Carregando graficos da escola...</p>;
+      return <p className="texto-vazio">Carregando gráficos da escola...</p>;
     }
 
     if (comparacaoTurmas.length === 0) {
@@ -1180,7 +1180,7 @@ function App() {
             <span>{escolaSelecionada?.nome || "-"}</span>
           </div>
           <div>
-            <strong>Media geral</strong>
+            <strong>Média geral</strong>
             <span>{formatarMedia(mediaGeralEscola)}</span>
           </div>
           <div>
@@ -1221,7 +1221,7 @@ function App() {
 
         <div className="comparacao-turmas">
           <div className="planilha-cabecalho">
-            <h2>Media global por sala</h2>
+            <h2>Média global por sala</h2>
             <span>{comparacaoTurmas.length} turma(s)</span>
           </div>
 
@@ -1249,7 +1249,7 @@ function App() {
               <thead>
                 <tr>
                   <th>Turma</th>
-                  <th>Media geral</th>
+                  <th>Média geral</th>
                   {disciplinasComparacao.map((disciplina) => (
                     <th key={disciplina}>{disciplina}</th>
                   ))}
@@ -1278,7 +1278,7 @@ function App() {
 
         <div className="comparacao-turmas">
           <div className="planilha-cabecalho">
-            <h2>Comparacao entre turmas do mesmo ano</h2>
+            <h2>Comparação entre turmas do mesmo ano</h2>
             <span>Agrupado por ano</span>
           </div>
 
@@ -1385,7 +1385,7 @@ function App() {
           onClick={() => setPaginaAtual("analise")}
           type="button"
         >
-          Analise de dados
+          Análise de dados
         </button>
       </nav>
 
@@ -1427,7 +1427,7 @@ function App() {
 
           {paginaAtual === "analise" || paginaAtual === "resultado" ? (
             <div className="campo campo-info-analise">
-              <label>Periodo</label>
+              <label>Período</label>
               <div>Geral por bimestre</div>
             </div>
           ) : (
@@ -1617,15 +1617,15 @@ function App() {
             </div>
 
             {carregandoCorrecaoAlunoAtual && (
-              <p className="texto-vazio">Carregando correcao salva...</p>
+              <p className="texto-vazio">Carregando correção salva...</p>
             )}
 
             {correcaoAlunoAtual && (
               <div className="correcao-existente">
                 <div className="correcao-existente-cabecalho">
                   <div>
-                    <strong>Correcao ja salva para este aluno</strong>
-                    <span>Dia {correcaoAlunoAtual.dia} - {bimestre}Âº bimestre</span>
+                    <strong>Correção já salva para este aluno</strong>
+                    <span>Dia {correcaoAlunoAtual.dia} - {bimestre}º bimestre</span>
                   </div>
 
                   <div className="correcao-existente-acoes">
@@ -1935,8 +1935,8 @@ function App() {
       {paginaAtual === "analise" && (
         <section className="secao pagina">
           <div className="planilha-cabecalho">
-            <h2>Analise de dados</h2>
-            <span>{bimestre}Âº bimestre</span>
+            <h2>Análise de dados</h2>
+            <span>{bimestre}º bimestre</span>
           </div>
 
           {renderizarAnaliseDados()}
@@ -1950,7 +1950,7 @@ function App() {
               <div>
                 <h2>{detalheAluno.aluno.nome}</h2>
                 <span>
-                  NÂº {detalheAluno.aluno.numero_chamada ?? "-"} - Dia {detalheAluno.dia}
+                  Nº {detalheAluno.aluno.numero_chamada ?? "-"} - Dia {detalheAluno.dia}
                 </span>
               </div>
 
@@ -2046,7 +2046,7 @@ function App() {
                 Adaptada por disciplina
               </button>
               <button className="botao-perigo" type="button" onClick={excluirCorrecaoAluno}>
-                Excluir correcao
+                Excluir correção
               </button>
             </div>
 
