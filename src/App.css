@@ -223,6 +223,19 @@ button:disabled {
   max-width: 360px;
 }
 
+.campo-info-analise div {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
 label {
   margin-bottom: 7px;
   color: #344054;

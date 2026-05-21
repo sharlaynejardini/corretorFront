@@ -1425,25 +1425,32 @@ function App() {
             </select>
           </div>
 
-          <div className="campo">
-            <label>Dia da prova</label>
+          {paginaAtual === "analise" || paginaAtual === "resultado" ? (
+            <div className="campo campo-info-analise">
+              <label>Periodo</label>
+              <div>Geral por bimestre</div>
+            </div>
+          ) : (
+            <div className="campo">
+              <label>Dia da prova</label>
 
-            <select
-              value={dia}
-              onChange={(e) => {
-                const novoDia = e.target.value;
-                setDia(novoDia);
-                if (Number(novoDia) !== 1) {
-                  setCodigoGabarito("PADRAO");
-                }
-                setResultado(null);
-                setCorrecaoAlunoAtual(null);
-              }}
-            >
-              <option value={1}>Dia 1</option>
-              <option value={2}>Dia 2</option>
-            </select>
-          </div>
+              <select
+                value={dia}
+                onChange={(e) => {
+                  const novoDia = e.target.value;
+                  setDia(novoDia);
+                  if (Number(novoDia) !== 1) {
+                    setCodigoGabarito("PADRAO");
+                  }
+                  setResultado(null);
+                  setCorrecaoAlunoAtual(null);
+                }}
+              >
+                <option value={1}>Dia 1</option>
+                <option value={2}>Dia 2</option>
+              </select>
+            </div>
+          )}
         </div>
       </section>
 
