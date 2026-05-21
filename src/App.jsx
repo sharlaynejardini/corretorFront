@@ -1000,8 +1000,6 @@ function App() {
                 {disciplinasPlanilha.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
-                <th>Dia 1</th>
-                <th>Dia 2</th>
                 <th>Global</th>
                 <th>Status</th>
               </tr>
@@ -1011,8 +1009,6 @@ function App() {
               {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno);
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
-                const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
-                const notaDia2 = obterResultadoDia(resultadoAluno, 2)?.nota;
 
                 return (
                   <tr
@@ -1028,36 +1024,6 @@ function App() {
 
                       return <td key={disciplina}>{resumo ? resumo.nota : "-"}</td>;
                     })}
-
-                    <td>
-                      <div className="nota-editavel">
-                        <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</span>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            editarNotaAluno(aluno, 1, notaDia1);
-                          }}
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </td>
-
-                    <td>
-                      <div className="nota-editavel">
-                        <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</span>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            editarNotaAluno(aluno, 2, notaDia2);
-                          }}
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </td>
 
                     <td className="nota-global">{nota !== null && nota !== undefined ? nota : "-"}</td>
                     <td>
