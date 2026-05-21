@@ -42,6 +42,8 @@ function App() {
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
   const [buscaResultado, setBuscaResultado] = useState("");
   const [filtroStatusResultado, setFiltroStatusResultado] = useState("todos");
+  const [comparacaoTurmas, setComparacaoTurmas] = useState([]);
+  const [carregandoComparacaoTurmas, setCarregandoComparacaoTurmas] = useState(false);
   const [detalheAluno, setDetalheAluno] = useState(null);
   const [carregandoDetalheAluno, setCarregandoDetalheAluno] = useState(false);
   const [correcaoAlunoAtual, setCorrecaoAlunoAtual] = useState(null);
@@ -66,6 +68,12 @@ function App() {
   useEffect(() => {
     carregarCorrecaoAlunoSelecionado();
   }, [alunoId, escolaId, bimestre, dia, resultadosPorAluno]);
+
+  useEffect(() => {
+    if (paginaAtual === "analise" && escolaId && turmaId && turmas.length > 0) {
+      carregarComparacaoTurmas();
+    }
+  }, [paginaAtual, escolaId, turmaId, bimestre, turmas]);
 
   const questoesModelo = useMemo(() => {
     let numeroQuestao = 1;
@@ -119,6 +127,11 @@ function App() {
 
   function formatarMedia(valor) {
     return Number.isFinite(valor) ? valor.toFixed(1).replace(".", ",") : "-";
+  }
+
+  function extrairSerieTurma(nomeTurma = "") {
+    const digitos = String(nomeTurma).replace(/\D/g, "");
+    return digitos ? Number(digitos) : null;
   }
 
   function obterResultadoDia(resultadoAluno, diaResultado) {
@@ -351,6 +364,62 @@ function App() {
       }
 
       console.error(error);
+    }
+  }
+
+  async function carregarComparacaoTurmas() {
+    const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
+    const serieSelecionada = extrairSerieTurma(turmaSelecionada?.nome);
+
+    if (!serieSelecionada) {
+      setComparacaoTurmas([]);
+      return;
+    }
+
+    const turmasMesmoAno = turmas.filter(
+      (turma) => extrairSerieTurma(turma.nome) === serieSelecionada
+    );
+
+    setCarregandoComparacaoTurmas(true);
+
+    try {
+      const comparacoes = await Promise.all(
+        turmasMesmoAno.map(async (turma) => {
+          const [alunosResponse, resultadosResponse] = await Promise.all([
+            api.get(`/alunos/${turma.id}`),
+            api
+              .get("/resultados-alunos", {
+                params: { turma_id: turma.id, escola_id: escolaId, bimestre },
+              })
+              .catch((error) => {
+                if (error.response?.status === 404) return { data: [] };
+                throw error;
+              }),
+          ]);
+
+          const linhas = obterLinhasResultado(resultadosResponse.data);
+          const resultadoPorAluno = {};
+
+          linhas.forEach((linha) => {
+            const id = linha.aluno_id ?? linha.id_aluno ?? linha.id;
+            if (!id) return;
+
+            resultadoPorAluno[String(id)] = {
+              nota: extrairNota(linha),
+              disciplinas: calcularNotasDisciplinas(resumirPorDisciplina(linha.respostas_salvas)),
+            };
+          });
+
+          return calcularResumoTurma(turma, alunosResponse.data, resultadoPorAluno);
+        })
+      );
+
+      setComparacaoTurmas(comparacoes);
+    } catch (error) {
+      console.error(error);
+      setComparacaoTurmas([]);
+    } finally {
+      setCarregandoComparacaoTurmas(false);
     }
   }
 
@@ -962,12 +1031,16 @@ function App() {
   }
 
   function obterAnaliseTurma() {
+    return calcularResumoTurma(null, alunos, resultadosPorAluno);
+  }
+
+  function calcularResumoTurma(turma, alunosTurma, resultadosTurma) {
     const totaisDisciplinas = {};
     let somaGeral = 0;
     let alunosComNotaGeral = 0;
 
-    alunos.forEach((aluno) => {
-      const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+    alunosTurma.forEach((aluno) => {
+      const resultadoAluno = resultadosTurma[String(aluno.id)];
       if (!resultadoAluno) return;
 
       const notaGeral = extrairNota(resultadoAluno);
@@ -1000,9 +1073,11 @@ function App() {
       .sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 
     return {
+      turma,
       mediasDisciplinas,
       mediaGeral: alunosComNotaGeral ? somaGeral / alunosComNotaGeral : null,
       alunosComNotaGeral,
+      totalAlunos: alunosTurma.length,
     };
   }
 
@@ -1013,6 +1088,13 @@ function App() {
 
     const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
     const { mediasDisciplinas, mediaGeral, alunosComNotaGeral } = obterAnaliseTurma();
+    const disciplinasComparacao = Array.from(
+      new Set(
+        comparacaoTurmas.flatMap((turma) =>
+          turma.mediasDisciplinas.map((disciplina) => disciplina.disciplina)
+        )
+      )
+    ).sort((a, b) => a.localeCompare(b));
 
     return (
       <div className="analise-dados">
@@ -1034,15 +1116,32 @@ function App() {
         {mediasDisciplinas.length === 0 ? (
           <p className="texto-vazio">Ainda nao ha notas por disciplina para esta turma.</p>
         ) : (
-          <div className="analise-grid">
-            {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
-              <div className="analise-card" key={disciplina}>
-                <strong>{disciplina}</strong>
-                <span>{formatarMedia(media)}</span>
-                <small>{quantidade} aluno(s) com nota</small>
+          <>
+            <div className="analise-grid">
+              {mediasDisciplinas.map(({ disciplina, media, quantidade }) => (
+                <div className="analise-card" key={disciplina}>
+                  <strong>{disciplina}</strong>
+                  <span>{formatarMedia(media)}</span>
+                  <small>{quantidade} aluno(s) com nota</small>
+                </div>
+              ))}
+            </div>
+
+            <div className="grafico-bloco">
+              <h3>Media por disciplina</h3>
+              <div className="grafico-barras">
+                {mediasDisciplinas.map(({ disciplina, media }) => (
+                  <div className="barra-linha" key={disciplina}>
+                    <strong>{disciplina}</strong>
+                    <div className="barra-trilho">
+                      <span style={{ width: `${Math.max(4, (media / 10) * 100)}%` }} />
+                    </div>
+                    <em>{formatarMedia(media)}</em>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </>
         )}
 
         <div className="tabela-wrapper tabela-analise-wrapper">
@@ -1069,6 +1168,75 @@ function App() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div className="comparacao-turmas">
+          <div className="planilha-cabecalho">
+            <h2>Comparacao entre turmas do mesmo ano</h2>
+            <span>{carregandoComparacaoTurmas ? "Carregando..." : `${comparacaoTurmas.length} turma(s)`}</span>
+          </div>
+
+          {carregandoComparacaoTurmas ? (
+            <p className="texto-vazio">Carregando medias das turmas...</p>
+          ) : comparacaoTurmas.length === 0 ? (
+            <p className="texto-vazio">Selecione uma turma com ano identificado no nome.</p>
+          ) : (
+            <>
+              <div className="grafico-bloco">
+                <h3>Media geral por turma</h3>
+                <div className="grafico-colunas">
+                  {comparacaoTurmas.map((resumo) => (
+                    <div className="coluna-item" key={resumo.turma.id}>
+                      <div className="coluna-trilho">
+                        <span
+                          style={{
+                            height: `${Math.max(4, ((resumo.mediaGeral || 0) / 10) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <strong>{formatarMedia(resumo.mediaGeral)}</strong>
+                      <small>{resumo.turma.nome}</small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="tabela-wrapper tabela-analise-wrapper">
+                <table className="tabela-comparacao">
+                  <thead>
+                    <tr>
+                      <th>Turma</th>
+                      <th>Media geral</th>
+                      {disciplinasComparacao.map((disciplina) => (
+                        <th key={disciplina}>{disciplina}</th>
+                      ))}
+                      <th>Alunos considerados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparacaoTurmas.map((resumo) => (
+                      <tr key={resumo.turma.id}>
+                        <td>{resumo.turma.nome}</td>
+                        <td className="nota-global">{formatarMedia(resumo.mediaGeral)}</td>
+                        {disciplinasComparacao.map((disciplina) => {
+                          const mediaDisciplina = resumo.mediasDisciplinas.find(
+                            (item) => item.disciplina === disciplina
+                          );
+
+                          return (
+                            <td key={disciplina}>
+                              {formatarMedia(mediaDisciplina?.media)}
+                            </td>
+                          );
+                        })}
+                        <td>{resumo.alunosComNotaGeral}/{resumo.totalAlunos}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

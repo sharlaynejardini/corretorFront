@@ -380,10 +380,122 @@ textarea {
   min-width: 620px;
 }
 
+.tabela-comparacao {
+  min-width: 920px;
+}
+
 .linha-media-geral td {
   background: #f3f6fa;
   color: var(--text);
   font-weight: 800;
+}
+
+.grafico-bloco {
+  margin: 16px 0;
+  padding: 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.grafico-bloco h3 {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.grafico-barras {
+  display: grid;
+  gap: 12px;
+}
+
+.barra-linha {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(160px, 1fr) 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.barra-linha strong {
+  color: #344054;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.barra-linha em {
+  color: var(--text);
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+}
+
+.barra-trilho {
+  height: 18px;
+  overflow: hidden;
+  background: #e6edf5;
+  border-radius: 999px;
+}
+
+.barra-trilho span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+}
+
+.comparacao-turmas {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.grafico-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+  align-items: end;
+  gap: 14px;
+  min-height: 230px;
+}
+
+.coluna-item {
+  display: grid;
+  grid-template-rows: 150px auto auto;
+  gap: 8px;
+  align-items: end;
+  justify-items: center;
+  min-width: 0;
+}
+
+.coluna-trilho {
+  display: flex;
+  align-items: end;
+  width: 44px;
+  height: 150px;
+  overflow: hidden;
+  background: #e6edf5;
+  border-radius: 8px 8px 4px 4px;
+}
+
+.coluna-trilho span {
+  display: block;
+  width: 100%;
+  background: var(--success);
+  border-radius: inherit;
+}
+
+.coluna-item strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.coluna-item small {
+  max-width: 130px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .planilha-cabecalho {
@@ -906,5 +1018,18 @@ tbody tr:last-child td {
     align-items: flex-start;
     flex-direction: column;
     min-width: 128px;
+  }
+
+  .barra-linha {
+    grid-template-columns: 1fr 44px;
+    gap: 8px;
+  }
+
+  .barra-linha strong {
+    grid-column: 1 / -1;
+  }
+
+  .grafico-colunas {
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
   }
 }
