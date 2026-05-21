@@ -40,6 +40,8 @@ function App() {
   const [respostasManuais, setRespostasManuais] = useState("");
   const [resultado, setResultado] = useState(null);
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
+  const [buscaResultado, setBuscaResultado] = useState("");
+  const [filtroStatusResultado, setFiltroStatusResultado] = useState("todos");
   const [detalheAluno, setDetalheAluno] = useState(null);
   const [carregandoDetalheAluno, setCarregandoDetalheAluno] = useState(false);
   const [correcaoAlunoAtual, setCorrecaoAlunoAtual] = useState(null);
@@ -788,14 +790,77 @@ function App() {
       return <p className="texto-vazio">Selecione uma turma para ver o resultado final.</p>;
     }
 
+    const alunosComStatus = alunos.map((aluno) => {
+      const resultadoAluno = resultadosPorAluno[String(aluno.id)];
+      const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
+      const temAcertos = acertos !== null && acertos !== undefined;
+
+      return { aluno, resultadoAluno, temAcertos };
+    });
+    const totalCorrigidos = alunosComStatus.filter(({ temAcertos }) => temAcertos).length;
+    const totalPendentes = alunosComStatus.length - totalCorrigidos;
+    const termoBusca = buscaResultado.trim().toLowerCase();
+    const alunosFiltrados = alunosComStatus.filter(({ aluno, temAcertos }) => {
+      const textoAluno = `${aluno.numero_chamada ?? ""} ${aluno.nome ?? ""}`.toLowerCase();
+      const passaBusca = !termoBusca || textoAluno.includes(termoBusca);
+      const passaStatus =
+        filtroStatusResultado === "todos" ||
+        (filtroStatusResultado === "corrigidos" && temAcertos) ||
+        (filtroStatusResultado === "pendentes" && !temAcertos);
+
+      return passaBusca && passaStatus;
+    });
+
     return (
       <section className="planilha">
         <div className="planilha-cabecalho">
           <h2>Resultado final do bimestre</h2>
-          <span>{alunos.length} aluno(s)</span>
+          <span>{alunosFiltrados.length} de {alunos.length} aluno(s)</span>
         </div>
 
-        <div className="tabela-wrapper">
+        <div className="resultado-resumo">
+          <div>
+            <strong>Total</strong>
+            <span>{alunos.length}</span>
+          </div>
+          <div>
+            <strong>Corrigidos</strong>
+            <span>{totalCorrigidos}</span>
+          </div>
+          <div>
+            <strong>Pendentes</strong>
+            <span>{totalPendentes}</span>
+          </div>
+        </div>
+
+        <div className="resultado-filtros">
+          <div className="campo">
+            <label>Buscar aluno</label>
+            <input
+              type="search"
+              value={buscaResultado}
+              onChange={(event) => setBuscaResultado(event.target.value)}
+              placeholder="Nome ou numero"
+            />
+          </div>
+
+          <div className="campo">
+            <label>Status</label>
+            <select
+              value={filtroStatusResultado}
+              onChange={(event) => setFiltroStatusResultado(event.target.value)}
+            >
+              <option value="todos">Todos</option>
+              <option value="corrigidos">Corrigidos</option>
+              <option value="pendentes">Pendentes</option>
+            </select>
+          </div>
+        </div>
+
+        {alunosFiltrados.length === 0 ? (
+          <p className="texto-vazio">Nenhum aluno encontrado com esses filtros.</p>
+        ) : (
+        <div className="tabela-wrapper tabela-wrapper-final">
           <table className="tabela-resultado-final">
             <thead>
               <tr>
@@ -804,19 +869,16 @@ function App() {
                 {disciplinasPlanilha.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
-                <th>Nota dia 1</th>
-                <th>Nota dia 2</th>
-                <th>Nota global</th>
+                <th>Dia 1</th>
+                <th>Dia 2</th>
+                <th>Global</th>
                 <th>Status</th>
               </tr>
             </thead>
 
             <tbody>
-              {alunos.map((aluno) => {
-                const resultadoAluno = resultadosPorAluno[String(aluno.id)];
-                const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
+              {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno);
-                const temAcertos = acertos !== null && acertos !== undefined;
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
                 const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
                 const notaDia2 = obterResultadoDia(resultadoAluno, 2)?.nota;
@@ -866,21 +928,23 @@ function App() {
                       </div>
                     </td>
 
-                    <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
+                    <td className="nota-global">{nota !== null && nota !== undefined ? nota : "-"}</td>
                     <td>
-                      <span className={temAcertos ? "status corrigido" : "status pendente"}>
-                        {temAcertos ? "Corrigido" : "Pendente"}
-                      </span>
-                      <button
-                        className="botao-adaptada"
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          salvarProvaAdaptada(aluno, dia);
-                        }}
-                      >
-                        Adaptada
-                      </button>
+                      <div className="acoes-status">
+                        <span className={temAcertos ? "status corrigido" : "status pendente"}>
+                          {temAcertos ? "Corrigido" : "Pendente"}
+                        </span>
+                        <button
+                          className="botao-adaptada"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            salvarProvaAdaptada(aluno, dia);
+                          }}
+                        >
+                          Adaptada
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -888,6 +952,7 @@ function App() {
             </tbody>
           </table>
         </div>
+        )}
       </section>
     );
   }
