@@ -67,8 +67,8 @@ function App() {
   const [turmaId, setTurmaId] = useState("");
   const [alunoId, setAlunoId] = useState("");
 
-  const [bimestre, setBimestre] = useState(1);
-  const [dia, setDia] = useState(1);
+  const [bimestre, setBimestre] = useState(2);
+  const [dia, setDia] = useState(2);
   const [serieGabarito, setSerieGabarito] = useState(8);
   const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
 
