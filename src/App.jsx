@@ -89,6 +89,7 @@ function App() {
   const [carregandoCorrecaoAlunoAtual, setCarregandoCorrecaoAlunoAtual] = useState(false);
   const [gabaritoOficial, setGabaritoOficial] = useState({});
   const [mensagemGabarito, setMensagemGabarito] = useState("");
+  const [adaptadaInline, setAdaptadaInline] = useState(null);
 
   useEffect(() => {
     carregarEscolas();
@@ -249,6 +250,20 @@ function App() {
     return [dados];
   }
 
+  function resultadoEhAdaptado(resultadoAluno) {
+    return String(resultadoAluno?.codigoGabarito || "").toUpperCase() === "ADAPTADA";
+  }
+
+  function formatarDisciplinaResultado(resumo, resultadoAluno) {
+    if (!resumo) return "-";
+
+    if (resultadoEhAdaptado(resultadoAluno)) {
+      return `${resumo.acertos}/${resumo.total}`;
+    }
+
+    return resumo.nota;
+  }
+
   function resumirPorDisciplina(respostasSalvas = []) {
     return respostasSalvas.reduce((resumo, resposta) => {
       const disciplina = resposta.disciplina || "Sem disciplina";
@@ -304,6 +319,7 @@ function App() {
           totalQuestoesGlobal: linha.total_questoes_global,
           resultadosDias: linha.resultados_dias || {},
           modeloProvaId: linha.modelo_prova_id,
+          codigoGabarito: linha.codigo_gabarito,
           observacao: linha.observacao,
         };
       });
@@ -732,6 +748,90 @@ function App() {
     }
   }
 
+  async function iniciarAdaptadaInline(aluno, diaNota = dia) {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    try {
+      const disciplinas = await carregarDisciplinasDia(diaNota);
+
+      if (disciplinas.length === 0) {
+        alert("Modelo de prova nao encontrado para esse dia.");
+        return;
+      }
+
+      setAdaptadaInline({
+        alunoId: aluno.id,
+        dia: diaNota,
+        disciplinas,
+        valores: Object.fromEntries(
+          disciplinas.map((disciplina) => [disciplina.disciplina, ""])
+        ),
+      });
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao carregar disciplinas.");
+    }
+  }
+
+  function atualizarAdaptadaInline(disciplina, valor) {
+    setAdaptadaInline((estadoAtual) => {
+      if (!estadoAtual) return estadoAtual;
+
+      return {
+        ...estadoAtual,
+        valores: {
+          ...estadoAtual.valores,
+          [disciplina]: valor.replace(/\D/g, ""),
+        },
+      };
+    });
+  }
+
+  async function salvarAdaptadaInline(aluno) {
+    if (!adaptadaInline || String(adaptadaInline.alunoId) !== String(aluno.id)) return;
+
+    const acertosDisciplinas = {};
+
+    for (const disciplina of adaptadaInline.disciplinas) {
+      const valor = adaptadaInline.valores[disciplina.disciplina];
+      const acertos = Number(valor);
+
+      if (valor === "" || !Number.isInteger(acertos) || acertos < 0 || acertos > disciplina.quantidade_questoes) {
+        alert(`Informe acertos de ${disciplina.disciplina} entre 0 e ${disciplina.quantidade_questoes}.`);
+        return;
+      }
+
+      acertosDisciplinas[disciplina.disciplina] = acertos;
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("aluno_id", aluno.id);
+      formData.append("escola_id", escolaId);
+      formData.append("bimestre", bimestre);
+      formData.append("dia", adaptadaInline.dia);
+      formData.append("acertos_disciplinas", JSON.stringify(acertosDisciplinas));
+
+      const response = await api.patch("/nota-adaptada", formData);
+
+      setResultado(response.data);
+      atualizarPlanilha(response.data);
+      await carregarResultadosSalvos(turmaId);
+      setAdaptadaInline(null);
+
+      if (detalheAluno?.aluno?.id === aluno.id && detalheAluno?.dia === adaptadaInline.dia) {
+        await abrirDetalheAluno(aluno, adaptadaInline.dia, true);
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.detail || "Erro ao salvar prova adaptada.");
+    }
+  }
+
   async function abrirDetalheAluno(aluno, diaDetalhe = dia, forcar = false) {
     const resultadoAluno = resultadosPorAluno[String(aluno.id)];
     const resultadoDia = obterResultadoDia(resultadoAluno, diaDetalhe);
@@ -973,6 +1073,9 @@ function App() {
 
       return passaBusca && passaStatus;
     });
+    const disciplinasResultadoFinal = disciplinasPlanilha.length > 0
+      ? disciplinasPlanilha
+      : disciplinasModelo.map((disciplina) => disciplina.disciplina);
 
     return (
       <section className="planilha">
@@ -1029,7 +1132,7 @@ function App() {
               <tr>
                 <th>Nº</th>
                 <th>Aluno</th>
-                {disciplinasPlanilha.map((disciplina) => (
+                {disciplinasResultadoFinal.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
                 <th>Global</th>
@@ -1041,38 +1144,95 @@ function App() {
               {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno);
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
+                const editandoAdaptada = String(adaptadaInline?.alunoId) === String(aluno.id);
 
                 return (
                   <tr
                     key={aluno.id}
-                    className={temAcertos ? "linha-clicavel" : ""}
-                    onClick={() => abrirDetalheAluno(aluno, diaDetalhePreferido)}
+                    className={temAcertos && !editandoAdaptada ? "linha-clicavel" : ""}
+                    onClick={() => {
+                      if (!editandoAdaptada) {
+                        abrirDetalheAluno(aluno, diaDetalhePreferido);
+                      }
+                    }}
                   >
                     <td>{aluno.numero_chamada ?? "-"}</td>
                     <td>{aluno.nome}</td>
 
-                    {disciplinasPlanilha.map((disciplina) => {
+                    {disciplinasResultadoFinal.map((disciplina) => {
                       const resumo = resultadoAluno?.disciplinas?.[disciplina];
+                      const disciplinaAdaptada = adaptadaInline?.disciplinas?.find(
+                        (item) => normalizarDisciplina(item.disciplina) === normalizarDisciplina(disciplina)
+                      );
 
-                      return <td key={disciplina}>{resumo ? resumo.nota : "-"}</td>;
+                      if (editandoAdaptada && disciplinaAdaptada) {
+                        return (
+                          <td key={disciplina}>
+                            <input
+                              className="input-acertos-adaptada"
+                              type="number"
+                              min="0"
+                              max={disciplinaAdaptada.quantidade_questoes}
+                              placeholder="0"
+                              value={adaptadaInline.valores[disciplinaAdaptada.disciplina] ?? ""}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(event) =>
+                                atualizarAdaptadaInline(
+                                  disciplinaAdaptada.disciplina,
+                                  event.target.value
+                                )
+                              }
+                            />
+                            <span className="total-acertos-adaptada">
+                              /{disciplinaAdaptada.quantidade_questoes}
+                            </span>
+                          </td>
+                        );
+                      }
+
+                      return (
+                        <td key={disciplina}>
+                          {formatarDisciplinaResultado(resumo, resultadoAluno)}
+                        </td>
+                      );
                     })}
 
                     <td className="nota-global">{nota !== null && nota !== undefined ? nota : "-"}</td>
                     <td>
                       <div className="acoes-status">
                         <span className={temAcertos ? "status corrigido" : "status pendente"}>
-                          {temAcertos ? "Corrigido" : "Pendente"}
+                          {resultadoEhAdaptado(resultadoAluno)
+                            ? "Adaptada"
+                            : temAcertos
+                              ? "Corrigido"
+                              : "Pendente"}
                         </span>
                         <button
                           className="botao-adaptada"
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            salvarProvaAdaptada(aluno, dia);
+                            if (editandoAdaptada) {
+                              salvarAdaptadaInline(aluno);
+                            } else {
+                              iniciarAdaptadaInline(aluno, dia);
+                            }
                           }}
                         >
-                          Adaptada
+                          {editandoAdaptada ? "Salvar" : "Adaptada"}
                         </button>
+                        {editandoAdaptada && (
+                          <button
+                            className="botao-cancelar-inline"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAdaptadaInline(null);
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1781,7 +1941,7 @@ function App() {
 
                             return (
                               <td key={disciplina}>
-                                {resumo ? resumo.nota : "-"}
+                                {formatarDisciplinaResultado(resumo, resultadoAluno)}
                               </td>
                             );
                           })}

@@ -813,6 +813,33 @@ tbody tr:last-child td {
   background: #172033;
 }
 
+.input-acertos-adaptada {
+  width: 54px;
+  min-height: 34px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.total-acertos-adaptada {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.botao-cancelar-inline {
+  width: auto;
+  min-height: 30px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #e8eef6;
+  color: var(--text);
+}
+
+.botao-cancelar-inline:hover {
+  background: #d8e2ef;
+}
+
 .nota-editavel {
   display: inline-grid;
   grid-template-columns: minmax(32px, auto) auto;
