@@ -305,7 +305,7 @@ function App() {
   }
 
   function formatarDisciplinaResultado(resumo, resultadoAluno) {
-    if (!resumo) return "-";
+    if (!resumo) return 0;
 
     return resumo.nota;
   }
@@ -1188,7 +1188,7 @@ function App() {
 
             <tbody>
               {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
-                const nota = resultadoAluno?.nota ?? extrairNota(aluno);
+                const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
                 const editandoAdaptada = String(adaptadaInline?.alunoId) === String(aluno.id);
 
@@ -1243,7 +1243,7 @@ function App() {
                       );
                     })}
 
-                    <td className="nota-global">{nota !== null && nota !== undefined ? nota : "-"}</td>
+                    <td className="nota-global">{nota}</td>
                     <td>
                       <div className="acoes-status">
                         <span className={temAcertos ? "status corrigido" : "status pendente"}>
@@ -1967,7 +1967,7 @@ function App() {
                     {alunos.map((aluno) => {
                       const resultadoAluno = resultadosPorAluno[String(aluno.id)];
                       const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
-                      const nota = resultadoAluno?.nota ?? extrairNota(aluno);
+                      const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                       const temAcertos = acertos !== null && acertos !== undefined;
                       const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
                       const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
@@ -1994,7 +1994,7 @@ function App() {
 
                           <td>
                             <div className="nota-editavel">
-                              <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : "-"}</span>
+                              <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : 0}</span>
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -2008,7 +2008,7 @@ function App() {
                           </td>
                           <td>
                             <div className="nota-editavel">
-                              <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : "-"}</span>
+                              <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : 0}</span>
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -2020,7 +2020,7 @@ function App() {
                               </button>
                             </div>
                           </td>
-                          <td>{nota !== null && nota !== undefined ? nota : "-"}</td>
+                          <td>{nota}</td>
                           <td>
                             <span className={temAcertos ? "status corrigido" : "status pendente"}>
                               {temAcertos ? "Corrigido" : "Pendente"}
