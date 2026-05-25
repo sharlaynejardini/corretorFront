@@ -42,9 +42,11 @@ const PALETA_DISCIPLINAS = [
 ];
 const GRUPOS_GABARITO = [
   { codigo: "PADRAO", nome: "Padrao" },
+  { codigo: "SUBSTITUTIVA", nome: "Substitutiva" },
   { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
   { codigo: "8B", nome: "8B - Takaoka Dia 1" },
 ];
+const GABARITO_AUTOMATICO = "AUTO";
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
 
@@ -71,6 +73,7 @@ function App() {
   const [dia, setDia] = useState(2);
   const [serieGabarito, setSerieGabarito] = useState(8);
   const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
+  const [codigoGabaritoCorrecao, setCodigoGabaritoCorrecao] = useState(GABARITO_AUTOMATICO);
 
   const [foto, setFoto] = useState(null);
   const [respostasManuais, setRespostasManuais] = useState("");
@@ -142,6 +145,26 @@ function App() {
   const disciplinasResultado = resultado?.respostas_salvas
     ? calcularNotasDisciplinas(resumirPorDisciplina(resultado.respostas_salvas))
     : {};
+  const gruposGabaritoDisponiveis = useMemo(() => {
+    if (Number(serieGabarito) === 8 && Number(dia) === 1) {
+      return GRUPOS_GABARITO;
+    }
+
+    return GRUPOS_GABARITO.filter((grupo) =>
+      ["PADRAO", "SUBSTITUTIVA"].includes(grupo.codigo)
+    );
+  }, [serieGabarito, dia]);
+  const gruposGabaritoCorrecao = useMemo(
+    () => [
+      { codigo: GABARITO_AUTOMATICO, nome: "Automatico da turma" },
+      ...gruposGabaritoDisponiveis,
+    ],
+    [gruposGabaritoDisponiveis]
+  );
+  const alunoSelecionado = useMemo(
+    () => alunos.find((aluno) => String(aluno.id) === String(alunoId)),
+    [alunos, alunoId]
+  );
 
   function extrairAcertos(dados) {
     return (
@@ -193,6 +216,12 @@ function App() {
     );
 
     return PALETA_DISCIPLINAS[somaCaracteres % PALETA_DISCIPLINAS.length];
+  }
+
+  function adicionarCodigoGabaritoCorrecao(formData, codigo = codigoGabaritoCorrecao) {
+    if (codigo && codigo !== GABARITO_AUTOMATICO) {
+      formData.append("codigo_gabarito", codigo);
+    }
   }
 
   function obterResultadoDia(resultadoAluno, diaResultado) {
@@ -614,6 +643,7 @@ function App() {
       formData.append("bimestre", bimestre);
       formData.append("dia", diaNota);
       formData.append("respostas", valor.toUpperCase());
+      adicionarCodigoGabaritoCorrecao(formData, dadosCorrecao?.codigo_gabarito);
 
       const response = await api.post("/corrigir-manual", formData);
 
@@ -823,6 +853,7 @@ function App() {
       formData.append("escola_id", escolaId);
       formData.append("bimestre", bimestre);
       formData.append("dia", dia);
+      adicionarCodigoGabaritoCorrecao(formData);
       formData.append("foto", foto);
 
       const response = await api.post("/corrigir-foto", formData);
@@ -864,6 +895,7 @@ function App() {
       formData.append("bimestre", bimestre);
       formData.append("dia", dia);
       formData.append("respostas", respostasManuais);
+      adicionarCodigoGabaritoCorrecao(formData);
 
       const response = await api.post("/corrigir-manual", formData);
 
@@ -1405,7 +1437,7 @@ function App() {
                 onChange={(e) => {
                   const novoDia = e.target.value;
                   setDia(novoDia);
-                  if (Number(novoDia) !== 1) {
+                  if (Number(novoDia) !== 1 && ["8AC", "8B"].includes(codigoGabarito)) {
                     setCodigoGabarito("PADRAO");
                   }
                   setResultado(null);
@@ -1434,7 +1466,7 @@ function App() {
               onChange={(e) => {
                 const novaSerie = Number(e.target.value);
                 setSerieGabarito(novaSerie);
-                if (novaSerie !== 8) {
+                if (novaSerie !== 8 && ["8AC", "8B"].includes(codigoGabarito)) {
                   setCodigoGabarito("PADRAO");
                 }
               }}
@@ -1447,21 +1479,19 @@ function App() {
             </select>
           </div>
 
-          {Number(serieGabarito) === 8 && Number(dia) === 1 && (
-            <div className="campo campo-grupo-gabarito">
-              <label>Grupo do gabarito</label>
-              <select
-                value={codigoGabarito}
-                onChange={(e) => setCodigoGabarito(e.target.value)}
-              >
-                {GRUPOS_GABARITO.map((grupo) => (
-                  <option key={grupo.codigo} value={grupo.codigo}>
-                    {grupo.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="campo campo-grupo-gabarito">
+            <label>Tipo de gabarito</label>
+            <select
+              value={codigoGabarito}
+              onChange={(e) => setCodigoGabarito(e.target.value)}
+            >
+              {gruposGabaritoDisponiveis.map((grupo) => (
+                <option key={grupo.codigo} value={grupo.codigo}>
+                  {grupo.nome}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {questoesModelo.length > 0 ? (
             <>
@@ -1580,6 +1610,20 @@ function App() {
                   }}
                 />
               </div>
+
+              <div className="campo">
+                <label>Gabarito usado</label>
+                <select
+                  value={codigoGabaritoCorrecao}
+                  onChange={(e) => setCodigoGabaritoCorrecao(e.target.value)}
+                >
+                  {gruposGabaritoCorrecao.map((grupo) => (
+                    <option key={grupo.codigo} value={grupo.codigo}>
+                      {grupo.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {carregandoCorrecaoAlunoAtual && (
@@ -1657,7 +1701,21 @@ function App() {
               </div>
             )}
 
-            <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
+            <div className="modal-acoes">
+              <button onClick={enviarFoto}>Enviar Foto do Gabarito</button>
+              <button
+                className="botao-secundario"
+                type="button"
+                disabled={!alunoSelecionado}
+                onClick={() => {
+                  if (alunoSelecionado) {
+                    salvarProvaAdaptada(alunoSelecionado, dia);
+                  }
+                }}
+              >
+                Adaptada por disciplina
+              </button>
+            </div>
 
             <div className="correcao-manual">
               <div className="campo">
