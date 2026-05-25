@@ -47,6 +47,16 @@ const GRUPOS_GABARITO = [
   { codigo: "8B", nome: "8B - Takaoka Dia 1" },
 ];
 const GABARITO_AUTOMATICO = "AUTO";
+const ORDEM_DISCIPLINAS_RESULTADO = [
+  "portugues",
+  "historia",
+  "geografia",
+  "educacao fisica",
+  "matematica",
+  "ciencias",
+  "artes",
+  "ingles",
+];
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
 
@@ -140,7 +150,7 @@ function App() {
       });
     });
 
-    return Array.from(disciplinas);
+    return ordenarDisciplinasResultado(Array.from(disciplinas));
   }, [resultadosPorAluno]);
 
   const disciplinasResultado = resultado?.respostas_salvas
@@ -198,7 +208,47 @@ function App() {
     return String(disciplina)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\./g, "")
+      .trim()
+      .replace(/\s+/g, " ")
       .toLowerCase();
+  }
+
+  function normalizarDisciplinaResultado(disciplina = "") {
+    const disciplinaNormalizada = normalizarDisciplina(disciplina);
+    const equivalencias = {
+      lp: "portugues",
+      "lingua portuguesa": "portugues",
+      portugues: "portugues",
+      his: "historia",
+      historia: "historia",
+      geo: "geografia",
+      geografia: "geografia",
+      ef: "educacao fisica",
+      "ed fisica": "educacao fisica",
+      "educacao fisica": "educacao fisica",
+      mat: "matematica",
+      matematica: "matematica",
+      cie: "ciencias",
+      ciencias: "ciencias",
+      artes: "artes",
+      ingles: "ingles",
+    };
+
+    return equivalencias[disciplinaNormalizada] || disciplinaNormalizada;
+  }
+
+  function ordenarDisciplinasResultado(disciplinas = []) {
+    return [...disciplinas].sort((a, b) => {
+      const indiceA = ORDEM_DISCIPLINAS_RESULTADO.indexOf(normalizarDisciplinaResultado(a));
+      const indiceB = ORDEM_DISCIPLINAS_RESULTADO.indexOf(normalizarDisciplinaResultado(b));
+      const ordemA = indiceA === -1 ? ORDEM_DISCIPLINAS_RESULTADO.length : indiceA;
+      const ordemB = indiceB === -1 ? ORDEM_DISCIPLINAS_RESULTADO.length : indiceB;
+
+      if (ordemA !== ordemB) return ordemA - ordemB;
+
+      return String(a).localeCompare(String(b));
+    });
   }
 
   function obterCorDisciplina(disciplina = "") {
@@ -1071,7 +1121,7 @@ function App() {
     });
     const disciplinasResultadoFinal = disciplinasPlanilha.length > 0
       ? disciplinasPlanilha
-      : disciplinasModelo.map((disciplina) => disciplina.disciplina);
+      : ordenarDisciplinasResultado(disciplinasModelo.map((disciplina) => disciplina.disciplina));
 
     return (
       <section className="planilha">
@@ -1131,7 +1181,7 @@ function App() {
                 {disciplinasResultadoFinal.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
-                <th>Global</th>
+                <th>Média geral</th>
                 <th>Status</th>
               </tr>
             </thead>
