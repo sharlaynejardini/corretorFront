@@ -199,6 +199,15 @@ function App() {
     return Number.isFinite(valor) ? valor.toFixed(1).replace(".", ",") : "-";
   }
 
+  function ehNotaBaixa(valor) {
+    const numero = Number(String(valor ?? "").replace(",", "."));
+    return Number.isFinite(numero) && numero < 5;
+  }
+
+  function classeNota(valor, classeBase = "") {
+    return [classeBase, ehNotaBaixa(valor) ? "nota-baixa" : ""].filter(Boolean).join(" ");
+  }
+
   function extrairSerieTurma(nomeTurma = "") {
     const digitos = String(nomeTurma).replace(/\D/g, "");
     return digitos ? Number(digitos) : null;
@@ -1236,14 +1245,16 @@ function App() {
                         );
                       }
 
+                      const notaDisciplina = formatarDisciplinaResultado(resumo, resultadoAluno);
+
                       return (
-                        <td key={disciplina}>
-                          {formatarDisciplinaResultado(resumo, resultadoAluno)}
+                        <td key={disciplina} className={classeNota(notaDisciplina)}>
+                          {notaDisciplina}
                         </td>
                       );
                     })}
 
-                    <td className="nota-global">{nota}</td>
+                    <td className={classeNota(nota, "nota-global")}>{nota}</td>
                     <td>
                       <div className="acoes-status">
                         <span className={temAcertos ? "status corrigido" : "status pendente"}>
@@ -1984,17 +1995,20 @@ function App() {
 
                           {disciplinasPlanilha.map((disciplina) => {
                             const resumo = resultadoAluno?.disciplinas?.[disciplina];
+                            const notaDisciplina = formatarDisciplinaResultado(resumo, resultadoAluno);
 
                             return (
-                              <td key={disciplina}>
-                                {formatarDisciplinaResultado(resumo, resultadoAluno)}
+                              <td key={disciplina} className={classeNota(notaDisciplina)}>
+                                {notaDisciplina}
                               </td>
                             );
                           })}
 
                           <td>
                             <div className="nota-editavel">
-                              <span>{notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : 0}</span>
+                              <span className={classeNota(notaDia1)}>
+                                {notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : 0}
+                              </span>
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -2008,7 +2022,9 @@ function App() {
                           </td>
                           <td>
                             <div className="nota-editavel">
-                              <span>{notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : 0}</span>
+                              <span className={classeNota(notaDia2)}>
+                                {notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : 0}
+                              </span>
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -2020,7 +2036,7 @@ function App() {
                               </button>
                             </div>
                           </td>
-                          <td>{nota}</td>
+                          <td className={classeNota(nota)}>{nota}</td>
                           <td>
                             <span className={temAcertos ? "status corrigido" : "status pendente"}>
                               {temAcertos ? "Corrigido" : "Pendente"}
@@ -2060,7 +2076,9 @@ function App() {
                   <ul>
                     {Object.entries(disciplinasResultado).map(([disciplina, resumo]) => (
                       <li key={disciplina}>
-                        <strong>{disciplina}:</strong> {resumo.nota} ({resumo.acertos}/{resumo.total})
+                        <strong>{disciplina}:</strong>{" "}
+                        <span className={classeNota(resumo.nota)}>{resumo.nota}</span>{" "}
+                        ({resumo.acertos}/{resumo.total})
                       </li>
                     ))}
                   </ul>
@@ -2075,13 +2093,15 @@ function App() {
 
               {resultado.nota_global !== undefined && (
                 <p>
-                  <strong>Nota global:</strong> {resultado.nota_global}
+                  <strong>Nota global:</strong>{" "}
+                  <span className={classeNota(resultado.nota_global)}>{resultado.nota_global}</span>
                 </p>
               )}
 
               {resultado.nota_dia !== undefined && (
                 <p>
-                  <strong>Nota do dia:</strong> {resultado.nota_dia}
+                  <strong>Nota do dia:</strong>{" "}
+                  <span className={classeNota(resultado.nota_dia)}>{resultado.nota_dia}</span>
                 </p>
               )}
 
@@ -2219,11 +2239,15 @@ function App() {
               </div>
               <div>
                 <strong>Nota do dia</strong>
-                <span>{detalheAluno.dados.nota_dia ?? "-"}</span>
+                <span className={classeNota(detalheAluno.dados.nota_dia)}>
+                  {detalheAluno.dados.nota_dia ?? "-"}
+                </span>
               </div>
               <div>
                 <strong>Nota global</strong>
-                <span>{detalheAluno.dados.nota_global ?? "-"}</span>
+                <span className={classeNota(detalheAluno.dados.nota_global)}>
+                  {detalheAluno.dados.nota_global ?? "-"}
+                </span>
               </div>
               <div>
                 <strong>Gabarito</strong>

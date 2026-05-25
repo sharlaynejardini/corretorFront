@@ -799,6 +799,11 @@ tbody tr:last-child td {
   font-weight: 800;
 }
 
+.nota-baixa {
+  color: #dc2626;
+  font-weight: 800;
+}
+
 .botao-adaptada {
   width: auto;
   min-height: 30px;
