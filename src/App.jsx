@@ -258,7 +258,7 @@ function App() {
     if (!resumo) return "-";
 
     if (resultadoEhAdaptado(resultadoAluno)) {
-      return `${resumo.acertos}/${resumo.total}`;
+      return `${resumo.acertos}/${resumo.total} - ${formatarMedia(resumo.nota)}`;
     }
 
     return resumo.nota;
