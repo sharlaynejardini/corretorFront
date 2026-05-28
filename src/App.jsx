@@ -44,6 +44,7 @@ const GRUPOS_GABARITO = [
   { codigo: "PADRAO", nome: "Padrao" },
   { codigo: "SUBSTITUTIVA", nome: "Substitutiva" },
   { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
+  { codigo: "8AC_SUBSTITUTIVA", nome: "8A e 8C - Substitutiva" },
   { codigo: "8B", nome: "8B - Takaoka Dia 1" },
 ];
 const GABARITO_AUTOMATICO = "AUTO";
