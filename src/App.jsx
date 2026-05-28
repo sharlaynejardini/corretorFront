@@ -472,8 +472,11 @@ function App() {
       formData.append("respostas", respostas.join(","));
 
       const response = await api.post("/gabarito", formData);
-      setMensagemGabarito(`${response.data.mensagem}: ${response.data.total_questoes} questões`);
-      alert("Gabarito oficial salvo com sucesso!");
+      const recalculados = response.data.resultados_recalculados || 0;
+      setMensagemGabarito(
+        `${response.data.mensagem}: ${response.data.total_questoes} questões, ${recalculados} correções recalculadas`
+      );
+      alert(`Gabarito oficial salvo com sucesso! Correções recalculadas: ${recalculados}`);
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.detail || "Erro ao salvar gabarito");
