@@ -46,6 +46,7 @@ const GRUPOS_GABARITO = [
   { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
   { codigo: "8AC_SUBSTITUTIVA", nome: "8A e 8C - Substitutiva" },
   { codigo: "8B", nome: "8B - Takaoka Dia 1" },
+  { codigo: "8B_SUBSTITUTIVA", nome: "8B - Substitutiva" },
 ];
 const GABARITO_AUTOMATICO = "AUTO";
 const ORDEM_DISCIPLINAS_RESULTADO = [
