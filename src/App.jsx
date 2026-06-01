@@ -1972,8 +1972,6 @@ function App() {
                       {disciplinasPlanilha.map((disciplina) => (
                         <th key={disciplina}>{disciplina}</th>
                       ))}
-                      <th>Nota dia 1</th>
-                      <th>Nota dia 2</th>
                       <th>Nota global</th>
                       <th>Status</th>
                     </tr>
@@ -1986,8 +1984,6 @@ function App() {
                       const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                       const temAcertos = acertos !== null && acertos !== undefined;
                       const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
-                      const notaDia1 = obterResultadoDia(resultadoAluno, 1)?.nota;
-                      const notaDia2 = obterResultadoDia(resultadoAluno, 2)?.nota;
 
                       return (
                         <tr
@@ -2009,38 +2005,6 @@ function App() {
                             );
                           })}
 
-                          <td>
-                            <div className="nota-editavel">
-                              <span className={classeNota(notaDia1)}>
-                                {notaDia1 !== null && notaDia1 !== undefined ? notaDia1 : 0}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  editarNotaAluno(aluno, 1, notaDia1);
-                                }}
-                              >
-                                Editar
-                              </button>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="nota-editavel">
-                              <span className={classeNota(notaDia2)}>
-                                {notaDia2 !== null && notaDia2 !== undefined ? notaDia2 : 0}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  editarNotaAluno(aluno, 2, notaDia2);
-                                }}
-                              >
-                                Editar
-                              </button>
-                            </div>
-                          </td>
                           <td className={classeNota(nota)}>{nota}</td>
                           <td>
                             <span className={temAcertos ? "status corrigido" : "status pendente"}>
