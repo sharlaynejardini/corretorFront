@@ -110,6 +110,24 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const codigoAgenor = obterCodigoGabaritoAgenor(escolaId, bimestre, dia);
+
+    if (codigoAgenor) {
+      setCodigoGabarito(codigoAgenor);
+      setCodigoGabaritoCorrecao(codigoAgenor);
+      return;
+    }
+
+    if (["CADERNO_A", "CADERNO_B"].includes(codigoGabarito)) {
+      setCodigoGabarito("PADRAO");
+    }
+
+    if (["CADERNO_A", "CADERNO_B"].includes(codigoGabaritoCorrecao)) {
+      setCodigoGabaritoCorrecao(GABARITO_AUTOMATICO);
+    }
+  }, [escolaId, bimestre, dia, escolas, codigoGabarito, codigoGabaritoCorrecao]);
+
+  useEffect(() => {
     carregarModeloEGabarito();
   }, [escolaId, bimestre, dia, serieGabarito, codigoGabarito]);
 
@@ -225,6 +243,24 @@ function App() {
       .trim()
       .replace(/\s+/g, " ")
       .toLowerCase();
+  }
+
+  function obterEscolaSelecionada(idEscola = escolaId) {
+    return escolas.find((escola) => String(escola.id) === String(idEscola));
+  }
+
+  function escolaEhAgenor(idEscola = escolaId) {
+    return normalizarDisciplina(obterEscolaSelecionada(idEscola)?.nome).includes("agenor");
+  }
+
+  function obterCodigoGabaritoAgenor(idEscola = escolaId, valorBimestre = bimestre, valorDia = dia) {
+    if (!escolaEhAgenor(idEscola) || Number(valorBimestre) !== 2) {
+      return null;
+    }
+
+    if (Number(valorDia) === 1) return "CADERNO_A";
+    if (Number(valorDia) === 2) return "CADERNO_B";
+    return null;
   }
 
   function normalizarDisciplinaResultado(disciplina = "") {
