@@ -42,6 +42,8 @@ const PALETA_DISCIPLINAS = [
 ];
 const GRUPOS_GABARITO = [
   { codigo: "PADRAO", nome: "Padrao" },
+  { codigo: "CADERNO_A", nome: "Caderno A" },
+  { codigo: "CADERNO_B", nome: "Caderno B" },
   { codigo: "SUBSTITUTIVA", nome: "Substitutiva" },
   { codigo: "8AC", nome: "8A e 8C - Takaoka Dia 1" },
   { codigo: "8AC_SUBSTITUTIVA", nome: "8A e 8C - Substitutiva" },
@@ -164,7 +166,7 @@ function App() {
     }
 
     return GRUPOS_GABARITO.filter((grupo) =>
-      ["PADRAO", "SUBSTITUTIVA"].includes(grupo.codigo)
+      ["PADRAO", "CADERNO_A", "CADERNO_B", "SUBSTITUTIVA"].includes(grupo.codigo)
     );
   }, [serieGabarito, dia]);
   const gruposGabaritoCorrecao = useMemo(
@@ -1195,7 +1197,7 @@ function App() {
                 {disciplinasResultadoFinal.map((disciplina) => (
                   <th key={disciplina}>{disciplina}</th>
                 ))}
-                <th>Média geral</th>
+                <th>Média Global</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -1400,7 +1402,7 @@ function App() {
             <span>{escolaSelecionada?.nome || "-"}</span>
           </div>
           <div>
-            <strong>Média geral</strong>
+            <strong>Média Global</strong>
             <span>{formatarMedia(mediaGeralEscola)}</span>
           </div>
           <div>
@@ -1469,7 +1471,7 @@ function App() {
               <thead>
                 <tr>
                   <th>Turma</th>
-                  <th>Média geral</th>
+                  <th>Média Global</th>
                   {disciplinasComparacao.map((disciplina) => (
                     <th key={disciplina}>{disciplina}</th>
                   ))}
@@ -1890,11 +1892,7 @@ function App() {
                     <span>{correcaoAlunoAtual.acertos ?? 0}/{correcaoAlunoAtual.total_questoes ?? 0}</span>
                   </div>
                   <div>
-                    <strong>Nota do dia</strong>
-                    <span>{correcaoAlunoAtual.nota_dia ?? "-"}</span>
-                  </div>
-                  <div>
-                    <strong>Nota global</strong>
+                    <strong>Média Global</strong>
                     <span>{correcaoAlunoAtual.nota_global ?? "-"}</span>
                   </div>
                   <div>
@@ -1972,7 +1970,7 @@ function App() {
                       {disciplinasPlanilha.map((disciplina) => (
                         <th key={disciplina}>{disciplina}</th>
                       ))}
-                      <th>Nota global</th>
+                      <th>Média Global</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -2062,15 +2060,8 @@ function App() {
 
               {resultado.nota_global !== undefined && (
                 <p>
-                  <strong>Nota global:</strong>{" "}
+                  <strong>Média Global:</strong>{" "}
                   <span className={classeNota(resultado.nota_global)}>{resultado.nota_global}</span>
-                </p>
-              )}
-
-              {resultado.nota_dia !== undefined && (
-                <p>
-                  <strong>Nota do dia:</strong>{" "}
-                  <span className={classeNota(resultado.nota_dia)}>{resultado.nota_dia}</span>
                 </p>
               )}
 
@@ -2207,13 +2198,7 @@ function App() {
                 </span>
               </div>
               <div>
-                <strong>Nota do dia</strong>
-                <span className={classeNota(detalheAluno.dados.nota_dia)}>
-                  {detalheAluno.dados.nota_dia ?? "-"}
-                </span>
-              </div>
-              <div>
-                <strong>Nota global</strong>
+                <strong>Média Global</strong>
                 <span className={classeNota(detalheAluno.dados.nota_global)}>
                   {detalheAluno.dados.nota_global ?? "-"}
                 </span>
