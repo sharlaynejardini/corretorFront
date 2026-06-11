@@ -103,6 +103,17 @@ h2 {
   margin-bottom: 24px;
 }
 
+.navegacao-publica {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.subtitulo-publico {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 button {
   width: 100%;
   min-height: 44px;
@@ -224,6 +235,19 @@ button:disabled {
 }
 
 .campo-info-analise div {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.campo-valor-publico {
   display: flex;
   align-items: center;
   min-height: 44px;

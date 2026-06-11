@@ -66,13 +66,20 @@ const SENHA_LOGIN = "cadastro2026";
 
 function App() {
   const fotoInputRef = useRef(null);
+  const acessoPublicoAgenor = useMemo(
+    () => window.location.pathname.toLowerCase().includes("agenor"),
+    []
+  );
+  const somenteVisualizacao = acessoPublicoAgenor;
   const [logado, setLogado] = useState(
     () => localStorage.getItem("corretor-gabarito-logado") === "true"
   );
   const [emailLogin, setEmailLogin] = useState("");
   const [senhaLogin, setSenhaLogin] = useState("");
   const [erroLogin, setErroLogin] = useState("");
-  const [paginaAtual, setPaginaAtual] = useState("corrigir");
+  const [paginaAtual, setPaginaAtual] = useState(
+    () => (acessoPublicoAgenor ? "resultado" : "corrigir")
+  );
 
   const [escolas, setEscolas] = useState([]);
   const [turmas, setTurmas] = useState([]);
@@ -108,6 +115,18 @@ function App() {
   useEffect(() => {
     carregarEscolas();
   }, []);
+
+  useEffect(() => {
+    if (!acessoPublicoAgenor || escolaId || escolas.length === 0) return;
+
+    const escolaAgenor = escolas.find((escola) =>
+      normalizarDisciplina(escola.nome).includes("agenor")
+    );
+
+    if (escolaAgenor) {
+      trocarEscola(escolaAgenor.id);
+    }
+  }, [acessoPublicoAgenor, escolas, escolaId]);
 
   useEffect(() => {
     const codigoAgenor = obterCodigoGabaritoAgenor(escolaId, bimestre, dia);
@@ -1242,7 +1261,8 @@ function App() {
               {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
-                const editandoAdaptada = String(adaptadaInline?.alunoId) === String(aluno.id);
+                const editandoAdaptada =
+                  !somenteVisualizacao && String(adaptadaInline?.alunoId) === String(aluno.id);
 
                 return (
                   <tr
@@ -1307,20 +1327,22 @@ function App() {
                               ? "Corrigido"
                               : "Pendente"}
                         </span>
-                        <button
-                          className="botao-adaptada"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (editandoAdaptada) {
-                              salvarAdaptadaInline(aluno);
-                            } else {
-                              iniciarAdaptadaInline(aluno, dia);
-                            }
-                          }}
-                        >
-                          {editandoAdaptada ? "Salvar" : "Adaptada"}
-                        </button>
+                        {!somenteVisualizacao && (
+                          <button
+                            className="botao-adaptada"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (editandoAdaptada) {
+                                salvarAdaptadaInline(aluno);
+                              } else {
+                                iniciarAdaptadaInline(aluno, dia);
+                              }
+                            }}
+                          >
+                            {editandoAdaptada ? "Salvar" : "Adaptada"}
+                          </button>
+                        )}
                         {editandoAdaptada && (
                           <button
                             className="botao-cancelar-inline"
@@ -1568,7 +1590,7 @@ function App() {
     );
   }
 
-  if (!logado) {
+  if (!logado && !acessoPublicoAgenor) {
     return (
       <main className="login-pagina">
         <form className="login-card" onSubmit={entrar}>
@@ -1605,15 +1627,31 @@ function App() {
   }
 
   return (
-    <div className="container">
+    <div className={acessoPublicoAgenor ? "container container-publico" : "container"}>
       <div className="topo-sistema">
-        <h1>Sistema de Correção de Gabaritos</h1>
-        <button className="botao-sair" type="button" onClick={sair}>
-          Sair
-        </button>
+        <div>
+          <h1>
+            {acessoPublicoAgenor
+              ? "Resultados e análise de dados - Agenor"
+              : "Sistema de Correção de Gabaritos"}
+          </h1>
+          {acessoPublicoAgenor && (
+            <p className="subtitulo-publico">Acesso somente para visualização</p>
+          )}
+        </div>
+        {!acessoPublicoAgenor && (
+          <button className="botao-sair" type="button" onClick={sair}>
+            Sair
+          </button>
+        )}
       </div>
 
-      <nav className="navegacao" aria-label="Páginas">
+      <nav
+        className={acessoPublicoAgenor ? "navegacao navegacao-publica" : "navegacao"}
+        aria-label="Páginas"
+      >
+        {!acessoPublicoAgenor && (
+          <>
         <button
           className={paginaAtual === "corrigir" ? "aba ativa" : "aba"}
           onClick={() => setPaginaAtual("corrigir")}
@@ -1629,6 +1667,8 @@ function App() {
         >
           Gabaritos oficiais
         </button>
+          </>
+        )}
 
         <button
           className={paginaAtual === "resultado" ? "aba ativa" : "aba"}
@@ -1654,15 +1694,21 @@ function App() {
           <div className="campo">
             <label>Escola</label>
 
-            <select value={escolaId} onChange={(e) => trocarEscola(e.target.value)}>
-              <option value="">Selecione</option>
+            {acessoPublicoAgenor ? (
+              <div className="campo-valor-publico">
+                {obterEscolaSelecionada()?.nome || "Carregando escola Agenor..."}
+              </div>
+            ) : (
+              <select value={escolaId} onChange={(e) => trocarEscola(e.target.value)}>
+                <option value="">Selecione</option>
 
-              {escolas.map((escola) => (
-                <option key={escola.id} value={escola.id}>
-                  {escola.nome}
-                </option>
-              ))}
-            </select>
+                {escolas.map((escola) => (
+                  <option key={escola.id} value={escola.id}>
+                    {escola.nome}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="campo">
@@ -2138,14 +2184,16 @@ function App() {
         <section className="secao pagina">
           <div className="planilha-cabecalho">
             <h2>Resultado final</h2>
-            <button
-              className="botao-download"
-              type="button"
-              onClick={baixarResultadoFinalExcel}
-              disabled={!escolaId}
-            >
-              Baixar Excel da escola
-            </button>
+            {!somenteVisualizacao && (
+              <button
+                className="botao-download"
+                type="button"
+                onClick={baixarResultadoFinalExcel}
+                disabled={!escolaId}
+              >
+                Baixar Excel da escola
+              </button>
+            )}
           </div>
 
           <div className="grade-controles">
@@ -2245,54 +2293,56 @@ function App() {
               </div>
             </div>
 
-            <div className="modal-acoes">
-              <button
-                type="button"
-                onClick={() =>
-                  editarNotaAluno(
-                    detalheAluno.aluno,
-                    detalheAluno.dia,
-                    detalheAluno.dados.nota_dia
-                  )
-                }
-              >
-                Editar nota
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editarAcertosAluno(
-                    detalheAluno.aluno,
-                    detalheAluno.dia,
-                    detalheAluno.dados.acertos,
-                    detalheAluno.dados.total_questoes
-                  )
-                }
-              >
-                Editar acertos
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  editarGabaritoAluno(
-                    detalheAluno.aluno,
-                    detalheAluno.dia,
-                    detalheAluno.dados
-                  )
-                }
-              >
-                Editar respostas
-              </button>
-              <button
-                type="button"
-                onClick={() => salvarProvaAdaptada(detalheAluno.aluno, detalheAluno.dia)}
-              >
-                Adaptada por disciplina
-              </button>
-              <button className="botao-perigo" type="button" onClick={excluirCorrecaoAluno}>
-                Excluir correção
-              </button>
-            </div>
+            {!somenteVisualizacao && (
+              <div className="modal-acoes">
+                <button
+                  type="button"
+                  onClick={() =>
+                    editarNotaAluno(
+                      detalheAluno.aluno,
+                      detalheAluno.dia,
+                      detalheAluno.dados.nota_dia
+                    )
+                  }
+                >
+                  Editar nota
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    editarAcertosAluno(
+                      detalheAluno.aluno,
+                      detalheAluno.dia,
+                      detalheAluno.dados.acertos,
+                      detalheAluno.dados.total_questoes
+                    )
+                  }
+                >
+                  Editar acertos
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    editarGabaritoAluno(
+                      detalheAluno.aluno,
+                      detalheAluno.dia,
+                      detalheAluno.dados
+                    )
+                  }
+                >
+                  Editar respostas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => salvarProvaAdaptada(detalheAluno.aluno, detalheAluno.dia)}
+                >
+                  Adaptada por disciplina
+                </button>
+                <button className="botao-perigo" type="button" onClick={excluirCorrecaoAluno}>
+                  Excluir correção
+                </button>
+              </div>
+            )}
 
             {detalheAluno.dados.respostas_salvas?.length > 0 ? (
               <div className="respostas-lidas">
