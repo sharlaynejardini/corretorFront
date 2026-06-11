@@ -1243,6 +1243,51 @@ function App() {
         {alunosFiltrados.length === 0 ? (
           <p className="texto-vazio">Nenhum aluno encontrado com esses filtros.</p>
         ) : (
+        <>
+        <div className="resultado-mobile-lista">
+          {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
+            const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
+            const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
+
+            return (
+              <button
+                className="resultado-mobile-card"
+                key={aluno.id}
+                type="button"
+                onClick={() => abrirDetalheAluno(aluno, diaDetalhePreferido)}
+              >
+                <div className="resultado-mobile-topo">
+                  <span>Nº {aluno.numero_chamada ?? "-"}</span>
+                  <span className={temAcertos ? "status corrigido" : "status pendente"}>
+                    {resultadoEhAdaptado(resultadoAluno)
+                      ? "Adaptada"
+                      : temAcertos
+                        ? "Corrigido"
+                        : "Pendente"}
+                  </span>
+                </div>
+                <strong>{aluno.nome}</strong>
+                <div className="resultado-mobile-media">
+                  <span>Média Global</span>
+                  <em className={classeNota(nota)}>{nota}</em>
+                </div>
+                <div className="resultado-mobile-disciplinas">
+                  {disciplinasResultadoFinal.map((disciplina) => {
+                    const resumo = resultadoAluno?.disciplinas?.[disciplina];
+                    const notaDisciplina = formatarDisciplinaResultado(resumo, resultadoAluno);
+
+                    return (
+                      <span key={disciplina}>
+                        {disciplina}: <b className={classeNota(notaDisciplina)}>{notaDisciplina}</b>
+                      </span>
+                    );
+                  })}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="tabela-wrapper tabela-wrapper-final">
           <table className="tabela-resultado-final">
             <thead>
@@ -1363,6 +1408,7 @@ function App() {
             </tbody>
           </table>
         </div>
+        </>
         )}
       </section>
     );

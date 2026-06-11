@@ -363,6 +363,76 @@ textarea {
   margin-bottom: 0;
 }
 
+.resultado-mobile-lista {
+  display: none;
+}
+
+.resultado-mobile-card {
+  width: 100%;
+  padding: 14px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  box-shadow: none;
+  text-align: left;
+}
+
+.resultado-mobile-card:hover {
+  background: #f8fbff;
+  box-shadow: none;
+}
+
+.resultado-mobile-card strong {
+  display: block;
+  margin: 10px 0 12px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.resultado-mobile-topo,
+.resultado-mobile-media {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resultado-mobile-topo > span:first-child,
+.resultado-mobile-media span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.resultado-mobile-media em {
+  color: var(--text);
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.resultado-mobile-disciplinas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.resultado-mobile-disciplinas span {
+  min-width: 0;
+  padding: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .analise-dados {
   margin-top: 24px;
 }
@@ -1219,5 +1289,35 @@ tbody tr:last-child td {
 
   .disciplina-coluna-trilho {
     height: 220px;
+  }
+
+  .container-publico .tabela-wrapper-final {
+    display: none;
+  }
+
+  .container-publico .resultado-mobile-lista {
+    display: grid;
+    gap: 12px;
+  }
+
+  .container-publico .resultado-resumo span {
+    font-size: 24px;
+  }
+
+  .container-publico .resultado-filtros {
+    margin-bottom: 12px;
+  }
+
+  .container-publico .modal-fundo {
+    padding: 10px;
+  }
+
+  .container-publico .modal-correcao {
+    max-height: calc(100vh - 20px);
+    padding: 16px;
+  }
+
+  .container-publico .respostas-lidas-grid {
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   }
 }
