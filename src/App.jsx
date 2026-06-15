@@ -372,6 +372,33 @@ function App() {
     return String(resultadoAluno?.codigoGabarito || "").toUpperCase() === "ADAPTADA";
   }
 
+  function obterStatusResultadoFinal(resultadoAluno, temAcertos) {
+    if (!temAcertos) {
+      return { rotulo: "Pendente", completo: false };
+    }
+
+    const diasModelo = (resultadoAluno?.diasModelo || [])
+      .map((diaResultado) => Number(diaResultado))
+      .filter((diaResultado) => Number.isFinite(diaResultado));
+    const diasCorrigidos = Object.keys(resultadoAluno?.resultadosDias || {})
+      .map((diaResultado) => Number(diaResultado))
+      .filter((diaResultado) => Number.isFinite(diaResultado));
+    const diasFaltantes = diasModelo.filter((diaResultado) => !diasCorrigidos.includes(diaResultado));
+
+    if (diasModelo.length > 1 && diasCorrigidos.length > 0 && diasFaltantes.length === 1) {
+      return { rotulo: `Falta Dia ${diasFaltantes[0]}`, completo: false };
+    }
+
+    if (diasModelo.length > 1 && diasCorrigidos.length > 0 && diasFaltantes.length > 1) {
+      return { rotulo: `Faltam Dias ${diasFaltantes.join(", ")}`, completo: false };
+    }
+
+    return {
+      rotulo: resultadoEhAdaptado(resultadoAluno) ? "Adaptada" : "Corrigido",
+      completo: true,
+    };
+  }
+
   function formatarDisciplinaResultado(resumo, resultadoAluno) {
     if (!resumo) return 0;
 
@@ -431,6 +458,7 @@ function App() {
           disciplinas,
           acertosGlobal: linha.acertos_global,
           totalQuestoesGlobal: linha.total_questoes_global,
+          diasModelo: linha.dias_modelo || [],
           resultadosDias: linha.resultados_dias || {},
           modeloProvaId: linha.modelo_prova_id,
           codigoGabarito: linha.codigo_gabarito,
@@ -1174,19 +1202,20 @@ function App() {
       const resultadoAluno = resultadosPorAluno[String(aluno.id)];
       const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
       const temAcertos = acertos !== null && acertos !== undefined;
+      const statusResultado = obterStatusResultadoFinal(resultadoAluno, temAcertos);
 
-      return { aluno, resultadoAluno, temAcertos };
+      return { aluno, resultadoAluno, temAcertos, statusResultado };
     });
-    const totalCorrigidos = alunosComStatus.filter(({ temAcertos }) => temAcertos).length;
+    const totalCorrigidos = alunosComStatus.filter(({ statusResultado }) => statusResultado.completo).length;
     const totalPendentes = alunosComStatus.length - totalCorrigidos;
     const termoBusca = buscaResultado.trim().toLowerCase();
-    const alunosFiltrados = alunosComStatus.filter(({ aluno, temAcertos }) => {
+    const alunosFiltrados = alunosComStatus.filter(({ aluno, statusResultado }) => {
       const textoAluno = `${aluno.numero_chamada ?? ""} ${aluno.nome ?? ""}`.toLowerCase();
       const passaBusca = !termoBusca || textoAluno.includes(termoBusca);
       const passaStatus =
         filtroStatusResultado === "todos" ||
-        (filtroStatusResultado === "corrigidos" && temAcertos) ||
-        (filtroStatusResultado === "pendentes" && !temAcertos);
+        (filtroStatusResultado === "corrigidos" && statusResultado.completo) ||
+        (filtroStatusResultado === "pendentes" && !statusResultado.completo);
 
       return passaBusca && passaStatus;
     });
@@ -1245,7 +1274,7 @@ function App() {
         ) : (
         <>
         <div className="resultado-mobile-lista">
-          {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
+          {alunosFiltrados.map(({ aluno, resultadoAluno, statusResultado }) => {
             const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
             const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
 
@@ -1258,12 +1287,8 @@ function App() {
               >
                 <div className="resultado-mobile-topo">
                   <span>Nº {aluno.numero_chamada ?? "-"}</span>
-                  <span className={temAcertos ? "status corrigido" : "status pendente"}>
-                    {resultadoEhAdaptado(resultadoAluno)
-                      ? "Adaptada"
-                      : temAcertos
-                        ? "Corrigido"
-                        : "Pendente"}
+                  <span className={statusResultado.completo ? "status corrigido" : "status pendente"}>
+                    {statusResultado.rotulo}
                   </span>
                 </div>
                 <strong>{aluno.nome}</strong>
@@ -1303,7 +1328,7 @@ function App() {
             </thead>
 
             <tbody>
-              {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos }) => {
+              {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos, statusResultado }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
                 const editandoAdaptada =
@@ -1365,12 +1390,8 @@ function App() {
                     <td className={classeNota(nota, "nota-global")}>{nota}</td>
                     <td>
                       <div className="acoes-status">
-                        <span className={temAcertos ? "status corrigido" : "status pendente"}>
-                          {resultadoEhAdaptado(resultadoAluno)
-                            ? "Adaptada"
-                            : temAcertos
-                              ? "Corrigido"
-                              : "Pendente"}
+                        <span className={statusResultado.completo ? "status corrigido" : "status pendente"}>
+                          {statusResultado.rotulo}
                         </span>
                         {!somenteVisualizacao && (
                           <button
@@ -2110,6 +2131,7 @@ function App() {
                       const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                       const temAcertos = acertos !== null && acertos !== undefined;
                       const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
+                      const statusResultado = obterStatusResultadoFinal(resultadoAluno, temAcertos);
 
                       return (
                         <tr
@@ -2133,8 +2155,8 @@ function App() {
 
                           <td className={classeNota(nota)}>{nota}</td>
                           <td>
-                            <span className={temAcertos ? "status corrigido" : "status pendente"}>
-                              {temAcertos ? "Corrigido" : "Pendente"}
+                            <span className={statusResultado.completo ? "status corrigido" : "status pendente"}>
+                              {statusResultado.rotulo}
                             </span>
                             <button
                               className="botao-adaptada"
