@@ -437,6 +437,98 @@ textarea {
   margin-top: 24px;
 }
 
+.analise-daniela {
+  margin-top: 18px;
+  padding: 18px 20px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.habilidades-reforco-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.habilidade-reforco-card {
+  min-height: 140px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #d7dee8;
+  border-left: 4px solid #d97706;
+  border-radius: 4px;
+}
+
+.habilidade-reforco-card strong,
+.habilidade-reforco-card span,
+.habilidade-reforco-card small {
+  display: block;
+}
+
+.habilidade-reforco-card strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.habilidade-reforco-card span {
+  margin: 12px 0 6px;
+  color: #b45309;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.habilidade-reforco-card small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.tabela-habilidades-alunos th:nth-child(3),
+.tabela-habilidades-alunos th:nth-child(4) {
+  min-width: 260px;
+}
+
+.habilidades-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-habilidade {
+  display: inline-flex;
+  align-items: center;
+  max-width: 260px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tag-atingida {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.tag-reforco {
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+}
+
+.texto-vazio-inline {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .graficos-turmas-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(320px, 1fr));

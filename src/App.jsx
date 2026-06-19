@@ -250,8 +250,22 @@ function App() {
   }
 
   function extrairSerieTurma(nomeTurma = "") {
+    if (normalizarDisciplina(nomeTurma).includes("cursinho")) {
+      return "Cursinho";
+    }
+
     const digitos = String(nomeTurma).replace(/\D/g, "");
     return digitos ? Number(digitos) : null;
+  }
+
+  function formatarSerieAgrupamento(serie) {
+    if (serie === "Sem ano") return "Sem ano identificado";
+    if (serie === "Cursinho") return "Cursinho";
+    return `${serie}º ano`;
+  }
+
+  function formatarHabilidadeCurta(habilidade = "") {
+    return String(habilidade).replace(/^Q(\d{2})\s*-\s*/, "Q$1 ");
   }
 
   function normalizarDisciplina(disciplina = "") {
@@ -270,6 +284,10 @@ function App() {
 
   function escolaEhAgenor(idEscola = escolaId) {
     return normalizarDisciplina(obterEscolaSelecionada(idEscola)?.nome).includes("agenor");
+  }
+
+  function escolaEhDaniela(idEscola = escolaId) {
+    return normalizarDisciplina(obterEscolaSelecionada(idEscola)?.nome).includes("daniela");
   }
 
   function obterCodigoGabaritoAgenor(idEscola = escolaId, valorBimestre = bimestre, valorDia = dia) {
@@ -1168,6 +1186,11 @@ function App() {
     setCarregandoComparacaoTurmas(false);
     setDetalheAluno(null);
     setCorrecaoAlunoAtual(null);
+    if (escolaEhDaniela(idEscola)) {
+      setBimestre(2);
+      setDia(1);
+      setSerieGabarito(8);
+    }
     carregarTurmas(idEscola);
   }
 
@@ -1437,12 +1460,16 @@ function App() {
 
   function calcularResumoTurma(turma, alunosTurma, resultadosTurma) {
     const totaisDisciplinas = {};
+    const alunosResumo = [];
     let somaGeral = 0;
     let alunosComNotaGeral = 0;
 
     alunosTurma.forEach((aluno) => {
       const resultadoAluno = resultadosTurma[String(aluno.id)];
-      if (!resultadoAluno) return;
+      if (!resultadoAluno) {
+        alunosResumo.push({ aluno, resultado: null });
+        return;
+      }
 
       const notaGeral = extrairNota(resultadoAluno);
       const notaGeralNumero = Number(notaGeral);
@@ -1463,6 +1490,8 @@ function App() {
         totaisDisciplinas[disciplina].soma += notaDisciplinaNumero;
         totaisDisciplinas[disciplina].quantidade += 1;
       });
+
+      alunosResumo.push({ aluno, resultado: resultadoAluno });
     });
 
     const mediasDisciplinas = Object.entries(totaisDisciplinas)
@@ -1479,6 +1508,7 @@ function App() {
       mediaGeral: alunosComNotaGeral ? somaGeral / alunosComNotaGeral : null,
       alunosComNotaGeral,
       totalAlunos: alunosTurma.length,
+      alunos: alunosResumo,
     };
   }
 
@@ -1518,6 +1548,63 @@ function App() {
       grupos[serie].push(resumo);
       return grupos;
     }, {});
+    const analiseHabilidadesDaniela = escolaEhDaniela()
+      ? disciplinasComparacao.map((habilidade) => {
+          let avaliados = 0;
+          let atingiram = 0;
+
+          comparacaoTurmas.forEach((resumo) => {
+            (resumo.alunos || []).forEach(({ resultado }) => {
+              const nota = Number(resultado?.disciplinas?.[habilidade]?.nota);
+              if (!Number.isFinite(nota)) return;
+
+              avaliados += 1;
+              if (nota >= 10) {
+                atingiram += 1;
+              }
+            });
+          });
+
+          return {
+            habilidade,
+            avaliados,
+            atingiram,
+            reforco: avaliados - atingiram,
+            aproveitamento: avaliados ? (atingiram / avaliados) * 100 : null,
+          };
+        })
+      : [];
+    const habilidadesReforcoDaniela = analiseHabilidadesDaniela
+      .filter((item) => item.avaliados > 0)
+      .sort((a, b) => {
+        if (a.aproveitamento !== b.aproveitamento) {
+          return a.aproveitamento - b.aproveitamento;
+        }
+
+        return a.habilidade.localeCompare(b.habilidade);
+      });
+    const alunosHabilidadesDaniela = escolaEhDaniela()
+      ? comparacaoTurmas.flatMap((resumo) =>
+          (resumo.alunos || []).map(({ aluno, resultado }) => {
+            const habilidades = resultado?.disciplinas || {};
+            const atingidas = disciplinasComparacao.filter(
+              (habilidade) => Number(habilidades[habilidade]?.nota) >= 10
+            );
+            const reforco = disciplinasComparacao.filter((habilidade) => {
+              const nota = Number(habilidades[habilidade]?.nota);
+              return Number.isFinite(nota) && nota < 10;
+            });
+
+            return {
+              aluno,
+              turma: resumo.turma,
+              resultado,
+              atingidas,
+              reforco,
+            };
+          })
+        )
+      : [];
 
     return (
       <div className="analise-dados">
@@ -1535,6 +1622,88 @@ function App() {
             <span>{totalAlunosComNota}/{totalAlunos}</span>
           </div>
         </div>
+
+        {escolaEhDaniela() && (
+          <div className="analise-daniela">
+            <div className="planilha-cabecalho">
+              <h2>Habilidades do simulado</h2>
+              <span>{disciplinasComparacao.length} habilidade(s)</span>
+            </div>
+
+            {habilidadesReforcoDaniela.length === 0 ? (
+              <p className="texto-vazio">Ainda não há correções para analisar as habilidades.</p>
+            ) : (
+              <>
+                <div className="habilidades-reforco-grid">
+                  {habilidadesReforcoDaniela.slice(0, 6).map((item) => (
+                    <div className="habilidade-reforco-card" key={item.habilidade}>
+                      <strong>{formatarHabilidadeCurta(item.habilidade)}</strong>
+                      <span>{Math.round(item.aproveitamento)}%</span>
+                      <small>
+                        {item.reforco} de {item.avaliados} precisam de reforço
+                      </small>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="tabela-wrapper tabela-analise-wrapper">
+                  <table className="tabela-comparacao tabela-habilidades-alunos">
+                    <thead>
+                      <tr>
+                        <th>Nº</th>
+                        <th>Aluno</th>
+                        <th>Atingiu</th>
+                        <th>Precisa de reforço</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alunosHabilidadesDaniela.map(({ aluno, resultado, atingidas, reforco }) => (
+                        <tr key={aluno.id}>
+                          <td>{aluno.numero_chamada ?? "-"}</td>
+                          <td>{aluno.nome}</td>
+                          <td>
+                            {resultado ? (
+                              <div className="habilidades-tags">
+                                {atingidas.length ? (
+                                  atingidas.map((habilidade) => (
+                                    <span className="tag-habilidade tag-atingida" key={habilidade}>
+                                      {formatarHabilidadeCurta(habilidade)}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="texto-vazio-inline">Nenhuma</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="texto-vazio-inline">Sem correção</span>
+                            )}
+                          </td>
+                          <td>
+                            {resultado ? (
+                              <div className="habilidades-tags">
+                                {reforco.length ? (
+                                  reforco.map((habilidade) => (
+                                    <span className="tag-habilidade tag-reforco" key={habilidade}>
+                                      {formatarHabilidadeCurta(habilidade)}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="texto-vazio-inline">Nenhuma</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="texto-vazio-inline">Sem correção</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="graficos-turmas-grid">
           {comparacaoTurmas.map((resumo) => (
@@ -1632,7 +1801,7 @@ function App() {
           <div className="comparacao-anos">
             {Object.entries(turmasPorAno).map(([serie, resumos]) => (
               <div className="grafico-bloco" key={serie}>
-                <h3>{serie === "Sem ano" ? "Sem ano identificado" : `${serie}º ano`}</h3>
+                <h3>{formatarSerieAgrupamento(serie)}</h3>
                 <div className="grafico-colunas">
                   {resumos.map((resumo) => (
                     <div className="coluna-item" key={resumo.turma.id}>
@@ -1789,10 +1958,16 @@ function App() {
                 setCorrecaoAlunoAtual(null);
               }}
             >
-              <option value={1}>1º Bimestre</option>
-              <option value={2}>2º Bimestre</option>
-              <option value={3}>3º Bimestre</option>
-              <option value={4}>4º Bimestre</option>
+              {escolaEhDaniela() ? (
+                <option value={2}>2º Bimestre</option>
+              ) : (
+                <>
+                  <option value={1}>1º Bimestre</option>
+                  <option value={2}>2º Bimestre</option>
+                  <option value={3}>3º Bimestre</option>
+                  <option value={4}>4º Bimestre</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -1817,8 +1992,14 @@ function App() {
                   setCorrecaoAlunoAtual(null);
                 }}
               >
-                <option value={1}>Dia 1</option>
-                <option value={2}>Dia 2</option>
+                {escolaEhDaniela() ? (
+                  <option value={1}>Simulado 1</option>
+                ) : (
+                  <>
+                    <option value={1}>Dia 1</option>
+                    <option value={2}>Dia 2</option>
+                  </>
+                )}
               </select>
             </div>
           )}
@@ -1844,11 +2025,15 @@ function App() {
                 }
               }}
             >
-              {SERIES.map((serie) => (
-                <option key={serie} value={serie}>
-                  {serie}º ano
-                </option>
-              ))}
+              {escolaEhDaniela() ? (
+                <option value={8}>Cursinho</option>
+              ) : (
+                SERIES.map((serie) => (
+                  <option key={serie} value={serie}>
+                    {serie}º ano
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
