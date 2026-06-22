@@ -66,11 +66,21 @@ const SENHA_LOGIN = "cadastro2026";
 
 function App() {
   const fotoInputRef = useRef(null);
-  const acessoPublicoAgenor = useMemo(
-    () => window.location.pathname.toLowerCase().includes("agenor"),
-    []
-  );
-  const somenteVisualizacao = acessoPublicoAgenor;
+  const caminhoPublico = useMemo(() => {
+    const caminho = window.location.pathname.toLowerCase();
+
+    if (caminho.includes("daniela") || caminho.includes("maria-vilani")) {
+      return { escola: "daniela", paginaInicial: "analise" };
+    }
+
+    if (caminho.includes("agenor")) {
+      return { escola: "agenor", paginaInicial: "resultado" };
+    }
+
+    return null;
+  }, []);
+  const acessoPublico = Boolean(caminhoPublico);
+  const somenteVisualizacao = acessoPublico;
   const [logado, setLogado] = useState(
     () => localStorage.getItem("corretor-gabarito-logado") === "true"
   );
@@ -78,7 +88,7 @@ function App() {
   const [senhaLogin, setSenhaLogin] = useState("");
   const [erroLogin, setErroLogin] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(
-    () => (acessoPublicoAgenor ? "resultado" : "corrigir")
+    () => caminhoPublico?.paginaInicial || "corrigir"
   );
 
   const [escolas, setEscolas] = useState([]);
@@ -117,16 +127,29 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!acessoPublicoAgenor || escolaId || escolas.length === 0) return;
+    if (!caminhoPublico || escolaId || escolas.length === 0) return;
 
-    const escolaAgenor = escolas.find((escola) =>
-      normalizarDisciplina(escola.nome).includes("agenor")
+    const escolaPublica = escolas.find((escola) =>
+      normalizarDisciplina(escola.nome).includes(caminhoPublico.escola)
     );
 
-    if (escolaAgenor) {
-      trocarEscola(escolaAgenor.id);
+    if (escolaPublica) {
+      trocarEscola(escolaPublica.id);
     }
-  }, [acessoPublicoAgenor, escolas, escolaId]);
+  }, [caminhoPublico, escolas, escolaId]);
+
+  useEffect(() => {
+    if (caminhoPublico?.escola !== "daniela" || turmaId || turmas.length === 0) return;
+
+    const turmaCursinho = turmas.find((turma) =>
+      normalizarDisciplina(turma.nome).includes("cursinho")
+    );
+
+    if (turmaCursinho) {
+      setTurmaId(turmaCursinho.id);
+      carregarAlunos(turmaCursinho.id);
+    }
+  }, [caminhoPublico, turmas, turmaId]);
 
   useEffect(() => {
     const codigoAgenor = obterCodigoGabaritoAgenor(escolaId, bimestre, dia);
@@ -1826,7 +1849,7 @@ function App() {
     );
   }
 
-  if (!logado && !acessoPublicoAgenor) {
+  if (!logado && !acessoPublico) {
     return (
       <main className="login-pagina">
         <form className="login-card" onSubmit={entrar}>
@@ -1863,19 +1886,21 @@ function App() {
   }
 
   return (
-    <div className={acessoPublicoAgenor ? "container container-publico" : "container"}>
+    <div className={acessoPublico ? "container container-publico" : "container"}>
       <div className="topo-sistema">
         <div>
           <h1>
-            {acessoPublicoAgenor
-              ? "Resultados e análise de dados - Agenor"
+            {acessoPublico
+              ? `Resultados e análise de dados - ${
+                  caminhoPublico.escola === "daniela" ? "Daniela Pinheiro" : "Agenor"
+                }`
               : "Sistema de Correção de Gabaritos"}
           </h1>
-          {acessoPublicoAgenor && (
+          {acessoPublico && (
             <p className="subtitulo-publico">Acesso somente para visualização</p>
           )}
         </div>
-        {!acessoPublicoAgenor && (
+        {!acessoPublico && (
           <button className="botao-sair" type="button" onClick={sair}>
             Sair
           </button>
@@ -1883,10 +1908,10 @@ function App() {
       </div>
 
       <nav
-        className={acessoPublicoAgenor ? "navegacao navegacao-publica" : "navegacao"}
+        className={acessoPublico ? "navegacao navegacao-publica" : "navegacao"}
         aria-label="Páginas"
       >
-        {!acessoPublicoAgenor && (
+        {!acessoPublico && (
           <>
         <button
           className={paginaAtual === "corrigir" ? "aba ativa" : "aba"}
@@ -1930,9 +1955,9 @@ function App() {
           <div className="campo">
             <label>Escola</label>
 
-            {acessoPublicoAgenor ? (
+            {acessoPublico ? (
               <div className="campo-valor-publico">
-                {obterEscolaSelecionada()?.nome || "Carregando escola Agenor..."}
+                {obterEscolaSelecionada()?.nome || "Carregando escola..."}
               </div>
             ) : (
               <select value={escolaId} onChange={(e) => trocarEscola(e.target.value)}>
