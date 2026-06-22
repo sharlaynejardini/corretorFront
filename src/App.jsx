@@ -291,6 +291,40 @@ function App() {
     return String(habilidade).replace(/^Q(\d{2})\s*-\s*/, "Q$1 ");
   }
 
+  function analisarHabilidadeDaniela(habilidade = "", aproveitamento = 0) {
+    const codigoQuestao = String(habilidade).match(/^Q\d{2}/)?.[0];
+    const orientacoes = {
+      Q01: "Manter atividades com gêneros digitais, finalidade comunicativa e uso social da tecnologia.",
+      Q02: "Retomar gêneros literários, contexto histórico e literatura como patrimônio cultural.",
+      Q03: "Desenvolver leitura por contexto, cognatos, palavras-chave e finalidade do texto em inglês.",
+      Q04: "Trabalhar variação regional e social, registro e contexto comunicativo em espanhol.",
+      Q05: "Ampliar a análise histórica da cidadania, dos direitos e dos movimentos sociais.",
+      Q06: "Consolidar Estado, instituições, conflitos e diferentes formas de organização do poder.",
+      Q07: "Retomar urbanização, segregação socioespacial, mobilidade e problemas urbanos.",
+      Q08: "Avançar na comparação de argumentos, conceitos e sistemas filosóficos.",
+      Q09: "Consolidar cidadania, participação política, direitos e função das instituições.",
+      Q10: "Reforçar globalização, blocos econômicos e divisão internacional do trabalho.",
+      Q11: "Reforçar calor e temperatura, equilíbrio térmico e formas de propagação do calor.",
+      Q12: "Trabalhar causas e consequências das ações humanas e a análise de impactos ambientais.",
+      Q13: "Retomar razão, proporção, conversão de unidades e aplicações de escalas.",
+      Q14: "Retomar leitura de gráficos e tabelas, média, mediana e interpretação de frequências.",
+    };
+
+    if (aproveitamento < 50) {
+      return { nivel: "Prioridade alta", classe: "prioridade-alta", orientacao: orientacoes[codigoQuestao] };
+    }
+
+    if (aproveitamento < 70) {
+      return { nivel: "Requer atenção", classe: "prioridade-media", orientacao: orientacoes[codigoQuestao] };
+    }
+
+    if (aproveitamento < 80) {
+      return { nivel: "Em consolidação", classe: "prioridade-consolidacao", orientacao: orientacoes[codigoQuestao] };
+    }
+
+    return { nivel: "Consolidada", classe: "prioridade-baixa", orientacao: orientacoes[codigoQuestao] };
+  }
+
   function normalizarDisciplina(disciplina = "") {
     return String(disciplina)
       .normalize("NFD")
@@ -1657,6 +1691,7 @@ function App() {
               <p className="texto-vazio">Ainda não há correções para analisar as habilidades.</p>
             ) : (
               <>
+                <h3 className="analise-subtitulo">Habilidades que mais precisam de reforço</h3>
                 <div className="habilidades-reforco-grid">
                   {habilidadesReforcoDaniela.slice(0, 6).map((item) => (
                     <div className="habilidade-reforco-card" key={item.habilidade}>
@@ -1669,6 +1704,51 @@ function App() {
                   ))}
                 </div>
 
+                <h3 className="analise-subtitulo">Análise completa das habilidades</h3>
+                <p className="analise-observacao">
+                  Cada habilidade foi avaliada por uma questão. Use o resultado como indicador
+                  inicial e confirme as prioridades com novas atividades.
+                </p>
+
+                <div className="tabela-wrapper tabela-analise-wrapper">
+                  <table className="tabela-comparacao tabela-analise-habilidades">
+                    <thead>
+                      <tr>
+                        <th>Habilidade avaliada</th>
+                        <th>Aproveitamento</th>
+                        <th>Resultado</th>
+                        <th>Diagnóstico</th>
+                        <th>Orientação pedagógica</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {habilidadesReforcoDaniela.map((item) => {
+                        const analise = analisarHabilidadeDaniela(
+                          item.habilidade,
+                          item.aproveitamento
+                        );
+
+                        return (
+                          <tr key={item.habilidade}>
+                            <td>{formatarHabilidadeCurta(item.habilidade)}</td>
+                            <td className="percentual-habilidade">
+                              {Math.round(item.aproveitamento)}%
+                            </td>
+                            <td>{item.atingiram}/{item.avaliados} atingiram</td>
+                            <td>
+                              <span className={`nivel-habilidade ${analise.classe}`}>
+                                {analise.nivel}
+                              </span>
+                            </td>
+                            <td>{analise.orientacao}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <h3 className="analise-subtitulo">Análise por aluno</h3>
                 <div className="tabela-wrapper tabela-analise-wrapper">
                   <table className="tabela-comparacao tabela-habilidades-alunos">
                     <thead>

@@ -452,6 +452,75 @@ textarea {
   margin-top: 16px;
 }
 
+.analise-subtitulo {
+  margin: 24px 0 10px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.analise-subtitulo:first-of-type {
+  margin-top: 16px;
+}
+
+.analise-observacao {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tabela-analise-habilidades th:first-child,
+.tabela-analise-habilidades td:first-child {
+  min-width: 270px;
+}
+
+.tabela-analise-habilidades th:last-child,
+.tabela-analise-habilidades td:last-child {
+  min-width: 330px;
+  white-space: normal;
+}
+
+.percentual-habilidade {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.nivel-habilidade {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.prioridade-alta {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.prioridade-media {
+  color: #9a3412;
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.prioridade-consolidacao {
+  color: #854d0e;
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+.prioridade-baixa {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
 .habilidade-reforco-card {
   min-height: 140px;
   padding: 14px;
