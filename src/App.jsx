@@ -62,7 +62,14 @@ const ORDEM_DISCIPLINAS_RESULTADO = [
   "ingles",
 ];
 const TRANSFERIDOS_RESULTADO_POR_TURMA = {
-  "8a": new Set([13, 17, 19]),
+  "8a": {
+    13: "Transferido",
+    17: "Transferido",
+    19: "Transferido",
+  },
+  "8c": {
+    26: "Transferida/Remanejamento 8B",
+  },
 };
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
@@ -368,12 +375,12 @@ function App() {
     return null;
   }
 
-  function alunoTransferidoResultado(aluno, idTurma = turmaId) {
+  function obterStatusTransferenciaResultado(aluno, idTurma = turmaId) {
     const turma = turmas.find((item) => String(item.id) === String(idTurma));
     const turmaNormalizada = normalizarDisciplina(turma?.nome).replace(/\s+/g, "");
     const transferidosTurma = TRANSFERIDOS_RESULTADO_POR_TURMA[turmaNormalizada];
 
-    return transferidosTurma?.has(Number(aluno?.numero_chamada)) || false;
+    return transferidosTurma?.[Number(aluno?.numero_chamada)] || null;
   }
 
   function normalizarDisciplinaResultado(disciplina = "") {
@@ -1359,9 +1366,10 @@ function App() {
       const resultadoAluno = resultadosPorAluno[String(aluno.id)];
       const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
       const temAcertos = acertos !== null && acertos !== undefined;
-      const transferido = alunoTransferidoResultado(aluno);
+      const statusTransferencia = obterStatusTransferenciaResultado(aluno);
+      const transferido = Boolean(statusTransferencia);
       const statusResultado = transferido
-        ? { rotulo: "Transferido", completo: false, transferido: true }
+        ? { rotulo: statusTransferencia, completo: false, transferido: true }
         : obterStatusResultadoFinal(resultadoAluno, temAcertos);
 
       return { aluno, resultadoAluno, temAcertos, statusResultado, transferido };
@@ -1712,7 +1720,7 @@ function App() {
                             {!diaCadastrado
                               ? "-"
                               : aluno.transferido
-                                ? "Transferido"
+                                ? aluno.status
                                 : ausente
                                   ? "Nao realizou"
                                   : "Realizou"}
