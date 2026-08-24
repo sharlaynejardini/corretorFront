@@ -1640,7 +1640,10 @@ function App() {
 
               <tbody>
                 {alunosAusentes.map((aluno) => (
-                  <tr key={aluno.aluno_id}>
+                  <tr
+                    key={aluno.aluno_id}
+                    className={aluno.transferido ? "linha-transferido" : ""}
+                  >
                     <td>{aluno.numero_chamada ?? "-"}</td>
                     <td>{aluno.aluno}</td>
                     {[1, 2].map((diaRelatorio) => {
@@ -1653,12 +1656,20 @@ function App() {
                             className={
                               !diaCadastrado
                                 ? "status neutro"
+                                : aluno.transferido
+                                  ? "status transferido"
                                 : ausente
                                   ? "status pendente"
                                   : "status corrigido"
                             }
                           >
-                            {!diaCadastrado ? "-" : ausente ? "Nao realizou" : "Realizou"}
+                            {!diaCadastrado
+                              ? "-"
+                              : aluno.transferido
+                                ? "Transferido"
+                                : ausente
+                                  ? "Nao realizou"
+                                  : "Realizou"}
                           </span>
                         </td>
                       );

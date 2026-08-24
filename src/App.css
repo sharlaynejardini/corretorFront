@@ -1047,8 +1047,20 @@ tbody tr:last-child td {
   color: #516173;
 }
 
+.status.transferido {
+  background: #bbf7d0;
+  color: #166534;
+}
+
 .tabela-ausentes {
   min-width: 760px;
+}
+
+.tabela-ausentes tbody tr.linha-transferido td,
+.tabela-ausentes tbody tr.linha-transferido:nth-child(even) td,
+.tabela-ausentes tbody tr.linha-transferido:hover td {
+  background: #dcfce7;
+  color: #14532d;
 }
 
 .acoes-status {
