@@ -319,7 +319,7 @@ textarea {
 
 .resultado-resumo {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -381,6 +381,12 @@ textarea {
 .resultado-mobile-card:hover {
   background: #f8fbff;
   box-shadow: none;
+}
+
+.resultado-mobile-card.linha-transferido,
+.resultado-mobile-card.linha-transferido:hover {
+  background: #dcfce7;
+  border-color: #86efac;
 }
 
 .resultado-mobile-card strong {
@@ -1014,6 +1020,19 @@ tbody tr:last-child td {
 .tabela-resultado-final tbody tr:hover td:nth-child(1),
 .tabela-resultado-final tbody tr:hover td:nth-child(2) {
   background: #f5f9ff;
+}
+
+.tabela-resultado-final tbody tr.linha-transferido td,
+.tabela-resultado-final tbody tr.linha-transferido:nth-child(even) td,
+.tabela-resultado-final tbody tr.linha-transferido:hover td,
+.tabela-resultado-final tbody tr.linha-transferido td:nth-child(1),
+.tabela-resultado-final tbody tr.linha-transferido td:nth-child(2),
+.tabela-resultado-final tbody tr.linha-transferido:nth-child(even) td:nth-child(1),
+.tabela-resultado-final tbody tr.linha-transferido:nth-child(even) td:nth-child(2),
+.tabela-resultado-final tbody tr.linha-transferido:hover td:nth-child(1),
+.tabela-resultado-final tbody tr.linha-transferido:hover td:nth-child(2) {
+  background: #dcfce7;
+  color: #14532d;
 }
 
 .tabela-resultado-final th:nth-child(2),

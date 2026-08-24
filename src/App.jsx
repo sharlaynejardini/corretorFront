@@ -61,6 +61,9 @@ const ORDEM_DISCIPLINAS_RESULTADO = [
   "artes",
   "ingles",
 ];
+const TRANSFERIDOS_RESULTADO_POR_TURMA = {
+  "8a": new Set([13, 17, 19]),
+};
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
 
@@ -363,6 +366,14 @@ function App() {
     if (Number(valorDia) === 1) return "CADERNO_A";
     if (Number(valorDia) === 2) return "CADERNO_B";
     return null;
+  }
+
+  function alunoTransferidoResultado(aluno, idTurma = turmaId) {
+    const turma = turmas.find((item) => String(item.id) === String(idTurma));
+    const turmaNormalizada = normalizarDisciplina(turma?.nome).replace(/\s+/g, "");
+    const transferidosTurma = TRANSFERIDOS_RESULTADO_POR_TURMA[turmaNormalizada];
+
+    return transferidosTurma?.has(Number(aluno?.numero_chamada)) || false;
   }
 
   function normalizarDisciplinaResultado(disciplina = "") {
@@ -1348,12 +1359,18 @@ function App() {
       const resultadoAluno = resultadosPorAluno[String(aluno.id)];
       const acertos = resultadoAluno?.acertos ?? extrairAcertos(aluno);
       const temAcertos = acertos !== null && acertos !== undefined;
-      const statusResultado = obterStatusResultadoFinal(resultadoAluno, temAcertos);
+      const transferido = alunoTransferidoResultado(aluno);
+      const statusResultado = transferido
+        ? { rotulo: "Transferido", completo: false, transferido: true }
+        : obterStatusResultadoFinal(resultadoAluno, temAcertos);
 
-      return { aluno, resultadoAluno, temAcertos, statusResultado };
+      return { aluno, resultadoAluno, temAcertos, statusResultado, transferido };
     });
-    const totalCorrigidos = alunosComStatus.filter(({ statusResultado }) => statusResultado.completo).length;
-    const totalPendentes = alunosComStatus.length - totalCorrigidos;
+    const totalTransferidos = alunosComStatus.filter(({ transferido }) => transferido).length;
+    const totalCorrigidos = alunosComStatus.filter(
+      ({ statusResultado, transferido }) => statusResultado.completo && !transferido
+    ).length;
+    const totalPendentes = alunosComStatus.length - totalCorrigidos - totalTransferidos;
     const termoBusca = buscaResultado.trim().toLowerCase();
     const alunosFiltrados = alunosComStatus.filter(({ aluno, statusResultado }) => {
       const textoAluno = `${aluno.numero_chamada ?? ""} ${aluno.nome ?? ""}`.toLowerCase();
@@ -1361,7 +1378,8 @@ function App() {
       const passaStatus =
         filtroStatusResultado === "todos" ||
         (filtroStatusResultado === "corrigidos" && statusResultado.completo) ||
-        (filtroStatusResultado === "pendentes" && !statusResultado.completo);
+        (filtroStatusResultado === "pendentes" && !statusResultado.completo && !statusResultado.transferido) ||
+        (filtroStatusResultado === "transferidos" && statusResultado.transferido);
 
       return passaBusca && passaStatus;
     });
@@ -1389,6 +1407,10 @@ function App() {
             <strong>Pendentes</strong>
             <span>{totalPendentes}</span>
           </div>
+          <div>
+            <strong>Transferidos</strong>
+            <span>{totalTransferidos}</span>
+          </div>
         </div>
 
         <div className="resultado-filtros">
@@ -1411,6 +1433,7 @@ function App() {
               <option value="todos">Todos</option>
               <option value="corrigidos">Corrigidos</option>
               <option value="pendentes">Pendentes</option>
+              <option value="transferidos">Transferidos</option>
             </select>
           </div>
         </div>
@@ -1420,20 +1443,32 @@ function App() {
         ) : (
         <>
         <div className="resultado-mobile-lista">
-          {alunosFiltrados.map(({ aluno, resultadoAluno, statusResultado }) => {
+          {alunosFiltrados.map(({ aluno, resultadoAluno, statusResultado, transferido }) => {
             const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
             const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
 
             return (
               <button
-                className="resultado-mobile-card"
+                className={transferido ? "resultado-mobile-card linha-transferido" : "resultado-mobile-card"}
                 key={aluno.id}
                 type="button"
-                onClick={() => abrirDetalheAluno(aluno, diaDetalhePreferido)}
+                onClick={() => {
+                  if (!transferido) {
+                    abrirDetalheAluno(aluno, diaDetalhePreferido);
+                  }
+                }}
               >
                 <div className="resultado-mobile-topo">
                   <span>Nº {aluno.numero_chamada ?? "-"}</span>
-                  <span className={statusResultado.completo ? "status corrigido" : "status pendente"}>
+                  <span
+                    className={
+                      statusResultado.transferido
+                        ? "status transferido"
+                        : statusResultado.completo
+                          ? "status corrigido"
+                          : "status pendente"
+                    }
+                  >
                     {statusResultado.rotulo}
                   </span>
                 </div>
@@ -1474,7 +1509,7 @@ function App() {
             </thead>
 
             <tbody>
-              {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos, statusResultado }) => {
+              {alunosFiltrados.map(({ aluno, resultadoAluno, temAcertos, statusResultado, transferido }) => {
                 const nota = resultadoAluno?.nota ?? extrairNota(aluno) ?? 0;
                 const diaDetalhePreferido = obterDiaDetalhePreferido(resultadoAluno);
                 const editandoAdaptada =
@@ -1483,9 +1518,12 @@ function App() {
                 return (
                   <tr
                     key={aluno.id}
-                    className={temAcertos && !editandoAdaptada ? "linha-clicavel" : ""}
+                    className={[
+                      temAcertos && !editandoAdaptada && !transferido ? "linha-clicavel" : "",
+                      transferido ? "linha-transferido" : "",
+                    ].filter(Boolean).join(" ")}
                     onClick={() => {
-                      if (!editandoAdaptada) {
+                      if (!editandoAdaptada && !transferido) {
                         abrirDetalheAluno(aluno, diaDetalhePreferido);
                       }
                     }}
@@ -1536,10 +1574,18 @@ function App() {
                     <td className={classeNota(nota, "nota-global")}>{nota}</td>
                     <td>
                       <div className="acoes-status">
-                        <span className={statusResultado.completo ? "status corrigido" : "status pendente"}>
+                        <span
+                          className={
+                            statusResultado.transferido
+                              ? "status transferido"
+                              : statusResultado.completo
+                                ? "status corrigido"
+                                : "status pendente"
+                          }
+                        >
                           {statusResultado.rotulo}
                         </span>
-                        {!somenteVisualizacao && (
+                        {!somenteVisualizacao && !transferido && (
                           <button
                             className="botao-adaptada"
                             type="button"
