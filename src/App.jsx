@@ -112,6 +112,8 @@ function App() {
   const [resultadosPorAluno, setResultadosPorAluno] = useState({});
   const [buscaResultado, setBuscaResultado] = useState("");
   const [filtroStatusResultado, setFiltroStatusResultado] = useState("todos");
+  const [relatorioAusentes, setRelatorioAusentes] = useState(null);
+  const [carregandoRelatorioAusentes, setCarregandoRelatorioAusentes] = useState(false);
   const [comparacaoTurmas, setComparacaoTurmas] = useState([]);
   const [carregandoComparacaoTurmas, setCarregandoComparacaoTurmas] = useState(false);
   const [detalheAluno, setDetalheAluno] = useState(null);
@@ -188,6 +190,12 @@ function App() {
       carregarComparacaoTurmas();
     }
   }, [paginaAtual, escolaId, bimestre, turmas]);
+
+  useEffect(() => {
+    if (paginaAtual === "ausentes" && escolaId && turmaId) {
+      carregarRelatorioAusentes();
+    }
+  }, [paginaAtual, escolaId, turmaId, bimestre]);
 
   const questoesModelo = useMemo(() => {
     let numeroQuestao = 1;
@@ -664,6 +672,7 @@ function App() {
       const response = await api.get(`/alunos/${idTurma}`);
       setAlunos(response.data);
       setResultadosPorAluno({});
+      setRelatorioAusentes(null);
       setDetalheAluno(null);
       setCorrecaoAlunoAtual(null);
       await carregarResultadosSalvos(idTurma);
@@ -767,6 +776,61 @@ function App() {
     } catch (error) {
       console.error(error);
       alert("Erro ao baixar resultado final.");
+    }
+  }
+
+  async function carregarRelatorioAusentes(idTurma = turmaId) {
+    if (!escolaId || !idTurma) {
+      setRelatorioAusentes(null);
+      return;
+    }
+
+    setCarregandoRelatorioAusentes(true);
+
+    try {
+      const response = await api.get("/relatorio-ausentes-turma", {
+        params: { turma_id: idTurma, escola_id: escolaId, bimestre },
+      });
+
+      setRelatorioAusentes(response.data);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setRelatorioAusentes(null);
+        return;
+      }
+
+      console.error(error);
+      alert("Erro ao carregar relatorio de ausentes.");
+    } finally {
+      setCarregandoRelatorioAusentes(false);
+    }
+  }
+
+  async function baixarRelatorioAusentesExcel() {
+    if (!escolaId || !turmaId) {
+      alert("Selecione escola e turma.");
+      return;
+    }
+
+    try {
+      const response = await api.get("/relatorio-ausentes-turma-xlsx", {
+        params: { turma_id: turmaId, escola_id: escolaId, bimestre },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      const turmaSelecionada = turmas.find((turma) => String(turma.id) === String(turmaId));
+      const nomeTurma = (turmaSelecionada?.nome || "turma").replace(/\s+/g, "_");
+
+      link.href = url;
+      link.download = `ausentes_${nomeTurma}_${bimestre}_bimestre.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao baixar relatorio de ausentes.");
     }
   }
 
@@ -1239,6 +1303,8 @@ function App() {
     setAlunos([]);
     setResultado(null);
     setResultadosPorAluno({});
+    setRelatorioAusentes(null);
+    setCarregandoRelatorioAusentes(false);
     setComparacaoTurmas([]);
     setCarregandoComparacaoTurmas(false);
     setDetalheAluno(null);
@@ -1510,6 +1576,99 @@ function App() {
           </table>
         </div>
         </>
+        )}
+      </section>
+    );
+  }
+
+  function renderizarRelatorioAusentes() {
+    if (!escolaId) {
+      return <p className="texto-vazio">Selecione uma escola para ver os ausentes.</p>;
+    }
+
+    if (!turmaId) {
+      return <p className="texto-vazio">Selecione uma turma para gerar o relatorio.</p>;
+    }
+
+    if (carregandoRelatorioAusentes) {
+      return <p className="texto-vazio">Carregando relatorio de ausentes...</p>;
+    }
+
+    if (!relatorioAusentes) {
+      return <p className="texto-vazio">Nenhum relatorio carregado para essa selecao.</p>;
+    }
+
+    const diasModelo = relatorioAusentes.dias_modelo || [];
+    const alunosAusentes = relatorioAusentes.alunos || [];
+
+    return (
+      <section className="planilha">
+        <div className="planilha-cabecalho">
+          <h2>Alunos que nao realizaram avaliacao</h2>
+          <span>{relatorioAusentes.turma}</span>
+        </div>
+
+        <div className="resultado-resumo">
+          <div>
+            <strong>Total</strong>
+            <span>{relatorioAusentes.total_alunos}</span>
+          </div>
+          <div>
+            <strong>Completos</strong>
+            <span>{relatorioAusentes.total_presentes}</span>
+          </div>
+          <div>
+            <strong>Ausentes</strong>
+            <span>{relatorioAusentes.total_ausentes}</span>
+          </div>
+        </div>
+
+        {alunosAusentes.length === 0 ? (
+          <p className="texto-vazio">Todos os alunos da turma realizaram os dias cadastrados.</p>
+        ) : (
+          <div className="tabela-wrapper">
+            <table className="tabela-ausentes">
+              <thead>
+                <tr>
+                  <th>NÂº</th>
+                  <th>Aluno</th>
+                  <th>Dia 1</th>
+                  <th>Dia 2</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {alunosAusentes.map((aluno) => (
+                  <tr key={aluno.aluno_id}>
+                    <td>{aluno.numero_chamada ?? "-"}</td>
+                    <td>{aluno.aluno}</td>
+                    {[1, 2].map((diaRelatorio) => {
+                      const diaCadastrado = diasModelo.includes(diaRelatorio);
+                      const ausente = aluno[`ausente_dia_${diaRelatorio}`];
+
+                      return (
+                        <td key={diaRelatorio}>
+                          <span
+                            className={
+                              !diaCadastrado
+                                ? "status neutro"
+                                : ausente
+                                  ? "status pendente"
+                                  : "status corrigido"
+                            }
+                          >
+                            {!diaCadastrado ? "-" : ausente ? "Nao realizou" : "Realizou"}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td>{aluno.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     );
@@ -2019,6 +2178,16 @@ function App() {
           Resultado final
         </button>
 
+        {!acessoPublico && (
+          <button
+            className={paginaAtual === "ausentes" ? "aba ativa" : "aba"}
+            onClick={() => setPaginaAtual("ausentes")}
+            type="button"
+          >
+            Ausentes
+          </button>
+        )}
+
         <button
           className={paginaAtual === "analise" ? "aba ativa" : "aba"}
           onClick={() => setPaginaAtual("analise")}
@@ -2060,6 +2229,7 @@ function App() {
               onChange={(e) => {
                 setBimestre(e.target.value);
                 setResultado(null);
+                setRelatorioAusentes(null);
                 setCorrecaoAlunoAtual(null);
               }}
             >
@@ -2076,7 +2246,7 @@ function App() {
             </select>
           </div>
 
-          {paginaAtual === "analise" || paginaAtual === "resultado" ? (
+          {paginaAtual === "analise" || paginaAtual === "resultado" || paginaAtual === "ausentes" ? (
             <div className="campo campo-info-analise">
               <label>Período</label>
               <div>Geral por bimestre</div>
@@ -2581,6 +2751,51 @@ function App() {
           </div>
 
           {renderizarTabelaResultadoFinal()}
+        </section>
+      )}
+
+      {paginaAtual === "ausentes" && (
+        <section className="secao pagina">
+          <div className="planilha-cabecalho">
+            <h2>Relatorio por turma</h2>
+            <button
+              className="botao-download"
+              type="button"
+              onClick={baixarRelatorioAusentesExcel}
+              disabled={!escolaId || !turmaId || carregandoRelatorioAusentes}
+            >
+              Baixar Excel
+            </button>
+          </div>
+
+          <div className="grade-controles">
+            <div className="campo">
+              <label>Turma</label>
+
+              <select
+                value={turmaId}
+                onChange={(e) => {
+                  setTurmaId(e.target.value);
+                  setAlunoId("");
+                  setAlunos([]);
+                  setResultado(null);
+                  setResultadosPorAluno({});
+                  setRelatorioAusentes(null);
+                  carregarAlunos(e.target.value);
+                }}
+              >
+                <option value="">Selecione</option>
+
+                {turmas.map((turma) => (
+                  <option key={turma.id} value={turma.id}>
+                    {turma.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {renderizarRelatorioAusentes()}
         </section>
       )}
 

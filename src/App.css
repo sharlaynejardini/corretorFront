@@ -98,7 +98,7 @@ h2 {
 
 .navegacao {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 24px;
 }
@@ -1040,6 +1040,15 @@ tbody tr:last-child td {
 .status.pendente {
   background: var(--warning-soft);
   color: var(--muted);
+}
+
+.status.neutro {
+  background: #e6edf5;
+  color: #516173;
+}
+
+.tabela-ausentes {
+  min-width: 760px;
 }
 
 .acoes-status {
