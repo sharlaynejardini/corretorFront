@@ -74,6 +74,9 @@ const TRANSFERIDOS_RESULTADO_POR_TURMA = {
     4: "Transferidos/Remanejado",
     18: "Transferidos/Remanejado",
   },
+  "9a": {
+    13: "Remanejados/Transferidos",
+  },
 };
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
