@@ -568,7 +568,8 @@ function App() {
         const id = linha.aluno_id ?? linha.id_aluno ?? linha.id ?? alunoId;
         if (!id) return;
 
-        const disciplinas = calcularNotasDisciplinas(resumirPorDisciplina(linha.respostas_salvas));
+        const disciplinas =
+          linha.disciplinas || calcularNotasDisciplinas(resumirPorDisciplina(linha.respostas_salvas));
 
         novosResultados[String(id)] = {
           acertos: extrairAcertos(linha),
