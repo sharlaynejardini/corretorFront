@@ -62,6 +62,12 @@ const ORDEM_DISCIPLINAS_RESULTADO = [
   "ingles",
 ];
 const TRANSFERIDOS_RESULTADO_POR_TURMA = {
+  "6b": {
+    nomes: {
+      "livia keiko": "Transferidos/Remanejados",
+      "livia keiko ribeiro hirao": "Transferidos/Remanejados",
+    },
+  },
   "8a": {
     13: "Transferido",
     17: "Transferido",
