@@ -77,6 +77,13 @@ const TRANSFERIDOS_RESULTADO_POR_TURMA = {
   "9a": {
     13: "Remanejados/Transferidos",
   },
+  "9c": {
+    5: "Transferidos/Remanejados",
+    nomes: {
+      "rebeca santos": "Transferidos/Remanejados",
+      "rebeca santos basilio": "Transferidos/Remanejados",
+    },
+  },
 };
 const EMAIL_LOGIN = "sharlayne.fonseca@professor.barueri.br";
 const SENHA_LOGIN = "cadastro2026";
@@ -387,7 +394,11 @@ function App() {
     const turmaNormalizada = normalizarDisciplina(turma?.nome).replace(/\s+/g, "");
     const transferidosTurma = TRANSFERIDOS_RESULTADO_POR_TURMA[turmaNormalizada];
 
-    return transferidosTurma?.[Number(aluno?.numero_chamada)] || null;
+    return (
+      transferidosTurma?.[Number(aluno?.numero_chamada)] ||
+      transferidosTurma?.nomes?.[normalizarDisciplina(aluno?.nome)] ||
+      null
+    );
   }
 
   function normalizarDisciplinaResultado(disciplina = "") {
