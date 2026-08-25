@@ -62,6 +62,19 @@ const ORDEM_DISCIPLINAS_RESULTADO = [
   "ingles",
 ];
 const TRANSFERIDOS_RESULTADO_POR_TURMA = {
+  "6a": {
+    1: "Transferidos/Remanejados",
+    5: "Transferidos/Remanejados",
+    14: "Transferidos/Remanejados",
+    nomes: {
+      "alice martins": "Transferidos/Remanejados",
+      "alice martins silva": "Transferidos/Remanejados",
+      "carolina akemi": "Transferidos/Remanejados",
+      "carolina akemi ishikawa": "Transferidos/Remanejados",
+      "isabel simoes": "Transferidos/Remanejados",
+      "isabel simoes hoisel": "Transferidos/Remanejados",
+    },
+  },
   "6b": {
     nomes: {
       "livia keiko": "Transferidos/Remanejados",
