@@ -81,6 +81,19 @@ const TRANSFERIDOS_RESULTADO_POR_TURMA = {
       "livia keiko ribeiro hirao": "Transferidos/Remanejados",
     },
   },
+  "7b": {
+    3: "Transferidos/Remanejados",
+    11: "Transferidos/Remanejados",
+    22: "Transferidos/Remanejados",
+    nomes: {
+      "arthur jesus": "Transferidos/Remanejados",
+      "arthur jesus da silva": "Transferidos/Remanejados",
+      "giulia papin": "Transferidos/Remanejados",
+      "giulia papin silva": "Transferidos/Remanejados",
+      "millena campos": "Transferidos/Remanejados",
+      "millena campos de azevedo silva": "Transferidos/Remanejados",
+    },
+  },
   "8a": {
     13: "Transferido",
     17: "Transferido",
