@@ -173,6 +173,13 @@ button:disabled {
   box-shadow: 0 8px 18px rgba(22, 128, 60, 0.16);
 }
 
+.grupo-botoes-download {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .botao-secundario {
   margin-top: 18px;
   background: #24364f;

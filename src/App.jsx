@@ -877,6 +877,32 @@ function App() {
     }
   }
 
+  async function baixarTodosRelatoriosAusentesExcel() {
+    if (!escolaId) {
+      alert("Selecione uma escola.");
+      return;
+    }
+
+    try {
+      const response = await api.get("/relatorio-ausentes-escola-xlsx", {
+        params: { escola_id: escolaId, bimestre },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `ausentes_todas_turmas_${bimestre}_bimestre.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao baixar todos os relatorios de ausentes.");
+    }
+  }
+
   async function editarNotaAluno(aluno, diaNota, notaAtual) {
     if (!escolaId) {
       alert("Selecione uma escola.");
@@ -2848,14 +2874,24 @@ function App() {
         <section className="secao pagina">
           <div className="planilha-cabecalho">
             <h2>Relatorio por turma</h2>
-            <button
-              className="botao-download"
-              type="button"
-              onClick={baixarRelatorioAusentesExcel}
-              disabled={!escolaId || !turmaId || carregandoRelatorioAusentes}
-            >
-              Baixar Excel
-            </button>
+            <div className="grupo-botoes-download">
+              <button
+                className="botao-download"
+                type="button"
+                onClick={baixarTodosRelatoriosAusentesExcel}
+                disabled={!escolaId || carregandoRelatorioAusentes}
+              >
+                Baixar todos
+              </button>
+              <button
+                className="botao-download"
+                type="button"
+                onClick={baixarRelatorioAusentesExcel}
+                disabled={!escolaId || !turmaId || carregandoRelatorioAusentes}
+              >
+                Baixar Excel
+              </button>
+            </div>
           </div>
 
           <div className="grade-controles">
