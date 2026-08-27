@@ -357,28 +357,47 @@ function App() {
 
   function analisarHabilidadeDaniela(habilidade = "", aproveitamento = 0) {
     const codigoQuestao = String(habilidade).match(/^Q\d{2}/)?.[0];
-    const orientacoes = {
-      Q01: "Reforcar genero campanha publicitaria, finalidade social e marcas linguisticas de mobilizacao.",
-      Q02: "Retomar estrutura narrativa, protagonista e apreciacao subjetiva em resenha critica.",
-      Q03: "Trabalhar alteracao verbal e escolha linguistica conforme contexto de engajamento social.",
-      Q04: "Analisar circulacao de noticias e diversidade de agentes, fontes e meios de informacao.",
-      Q05: "Reforcar monitoramento gramatical em conversas informais e usos cotidianos da lingua.",
-      Q06: "Discutir preconceito linguistico, variantes do portugues e valorizacao da diversidade linguistica.",
-      Q07: "Interpretar polissemia e efeitos de sentido em campanhas de conscientizacao.",
-      Q08: "Analisar apelo emotivo, culpa internalizada e recursos persuasivos em campanhas de transito.",
-      Q09: "Identificar funcao emotiva e expressao subjetiva em letra musical.",
-      Q10: "Reconhecer funcao referencial, dados concretos e finalidade informativa do texto.",
-      Q11: "Debater cidadania digital, democratizacao da voz e riscos de desinformacao.",
-      Q12: "Valorizar literatura periferica, identidade, linguagem oral e afirmacao cultural.",
-      Q13: "Retomar metafora, perspectiva narrativa e ambiguidade em Machado de Assis.",
-      Q14: "Analisar sociolinguistica, girias urbanas e legitimidade de marcas caipiras.",
-      Q15: "Discutir literatura contemporanea, escrita marginal e condicao de alta literatura.",
-      Q16: "Interpretar estranhamento visual/verbal, automatismo e postura cidada reflexiva.",
-      Q17: "Reconhecer registros lexicais urbanos, pertencimento e solidariedade de grupo.",
-      Q18: "Trabalhar ironia, repertorio cultural compartilhado e leitura intertextual.",
-      Q19: "Identificar funcao metalinguistica e reflexao da escrita sobre si mesma.",
-      Q20: "Reforcar adequacao de registro linguistico a situacoes de comunicacao interpessoal.",
+    const orientacoesPorBimestre = {
+      2: {
+        Q01: "Manter atividades com gêneros digitais, finalidade comunicativa e uso social da tecnologia.",
+        Q02: "Retomar gêneros literários, contexto histórico e literatura como patrimônio cultural.",
+        Q03: "Desenvolver leitura por contexto, cognatos, palavras-chave e finalidade do texto em inglês.",
+        Q04: "Trabalhar variação regional e social, registro e contexto comunicativo em espanhol.",
+        Q05: "Ampliar a análise histórica da cidadania, dos direitos e dos movimentos sociais.",
+        Q06: "Consolidar Estado, instituições, conflitos e diferentes formas de organização do poder.",
+        Q07: "Retomar urbanização, segregação socioespacial, mobilidade e problemas urbanos.",
+        Q08: "Avançar na comparação de argumentos, conceitos e sistemas filosóficos.",
+        Q09: "Consolidar cidadania, participação política, direitos e função das instituições.",
+        Q10: "Reforçar globalização, blocos econômicos e divisão internacional do trabalho.",
+        Q11: "Reforçar calor e temperatura, equilíbrio térmico e formas de propagação do calor.",
+        Q12: "Trabalhar causas e consequências das ações humanas e a análise de impactos ambientais.",
+        Q13: "Retomar razão, proporção, conversão de unidades e aplicações de escalas.",
+        Q14: "Retomar leitura de gráficos e tabelas, média, mediana e interpretação de frequências.",
+      },
+      3: {
+        Q01: "Reforçar gênero campanha publicitária, finalidade social e marcas linguísticas de mobilização.",
+        Q02: "Retomar estrutura narrativa, protagonista e apreciação subjetiva em resenha crítica.",
+        Q03: "Trabalhar alteração verbal e escolha linguística conforme contexto de engajamento social.",
+        Q04: "Analisar circulação de notícias e diversidade de agentes, fontes e meios de informação.",
+        Q05: "Reforçar monitoramento gramatical em conversas informais e usos cotidianos da língua.",
+        Q06: "Discutir preconceito linguístico, variantes do português e valorização da diversidade linguística.",
+        Q07: "Interpretar polissemia e efeitos de sentido em campanhas de conscientização.",
+        Q08: "Analisar apelo emotivo, culpa internalizada e recursos persuasivos em campanhas de trânsito.",
+        Q09: "Identificar função emotiva e expressão subjetiva em letra musical.",
+        Q10: "Reconhecer função referencial, dados concretos e finalidade informativa do texto.",
+        Q11: "Debater cidadania digital, democratização da voz e riscos de desinformação.",
+        Q12: "Valorizar literatura periférica, identidade, linguagem oral e afirmação cultural.",
+        Q13: "Retomar metáfora, perspectiva narrativa e ambiguidade em Machado de Assis.",
+        Q14: "Analisar sociolinguística, gírias urbanas e legitimidade de marcas caipiras.",
+        Q15: "Discutir literatura contemporânea, escrita marginal e condição de alta literatura.",
+        Q16: "Interpretar estranhamento visual/verbal, automatismo e postura cidadã reflexiva.",
+        Q17: "Reconhecer registros lexicais urbanos, pertencimento e solidariedade de grupo.",
+        Q18: "Trabalhar ironia, repertório cultural compartilhado e leitura intertextual.",
+        Q19: "Identificar função metalinguística e reflexão da escrita sobre si mesma.",
+        Q20: "Reforçar adequação de registro linguístico a situações de comunicação interpessoal.",
+      },
     };
+    const orientacoes = orientacoesPorBimestre[Number(bimestre)] || orientacoesPorBimestre[2];
 
     if (aproveitamento < 50) {
       return { nivel: "Prioridade alta", classe: "prioridade-alta", orientacao: orientacoes[codigoQuestao] };
