@@ -130,7 +130,16 @@ function App() {
     }
 
     if (caminho.includes("agenor")) {
-      return { escola: "agenor", paginaInicial: "resultado" };
+      const acessoTerceiroBimestre = caminho.includes("3") || caminho.includes("terceiro");
+      const paginaInicial = caminho.includes("analise") || acessoTerceiroBimestre
+        ? "analise"
+        : "resultado";
+
+      return {
+        escola: "agenor",
+        paginaInicial,
+        bimestre: acessoTerceiroBimestre ? 3 : undefined,
+      };
     }
 
     return null;
@@ -156,7 +165,7 @@ function App() {
   const [turmaId, setTurmaId] = useState("");
   const [alunoId, setAlunoId] = useState("");
 
-  const [bimestre, setBimestre] = useState(3);
+  const [bimestre, setBimestre] = useState(() => caminhoPublico?.bimestre || 3);
   const [dia, setDia] = useState(1);
   const [serieGabarito, setSerieGabarito] = useState(8);
   const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
@@ -2393,6 +2402,7 @@ function App() {
 
             <select
               value={bimestre}
+              disabled={Boolean(caminhoPublico?.bimestre)}
               onChange={(e) => {
                 setBimestre(e.target.value);
                 setResultado(null);
