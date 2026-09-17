@@ -456,6 +456,10 @@ function App() {
   }
 
   function obterStatusTransferenciaResultado(aluno, idTurma = turmaId) {
+    if (escolaEhAgenor()) {
+      return null;
+    }
+
     const turma = turmas.find((item) => String(item.id) === String(idTurma));
     const turmaNormalizada = normalizarDisciplina(turma?.nome).replace(/\s+/g, "");
     const transferidosTurma = TRANSFERIDOS_RESULTADO_POR_TURMA[turmaNormalizada];
