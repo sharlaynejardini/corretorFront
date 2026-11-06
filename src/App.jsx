@@ -165,8 +165,10 @@ function App() {
   const [turmaId, setTurmaId] = useState("");
   const [alunoId, setAlunoId] = useState("");
 
-  const [bimestre, setBimestre] = useState(() => caminhoPublico?.bimestre || 3);
-  const [dia, setDia] = useState(1);
+  const [bimestre, setBimestre] = useState(
+    () => caminhoPublico?.bimestre || (caminhoPublico?.escola === "daniela" ? 4 : 3)
+  );
+  const [dia, setDia] = useState(() => caminhoPublico?.escola === "daniela" ? 2 : 1);
   const [serieGabarito, setSerieGabarito] = useState(8);
   const [codigoGabarito, setCodigoGabarito] = useState("PADRAO");
   const [codigoGabaritoCorrecao, setCodigoGabaritoCorrecao] = useState(GABARITO_AUTOMATICO);
@@ -1443,8 +1445,8 @@ function App() {
     setDetalheAluno(null);
     setCorrecaoAlunoAtual(null);
     if (escolaEhDaniela(idEscola)) {
-      setBimestre(3);
-      setDia(1);
+      setBimestre(4);
+      setDia(2);
       setSerieGabarito(8);
     }
     carregarTurmas(idEscola);
@@ -2409,6 +2411,9 @@ function App() {
               disabled={Boolean(caminhoPublico?.bimestre)}
               onChange={(e) => {
                 setBimestre(e.target.value);
+                if (escolaEhDaniela()) {
+                  setDia(Number(e.target.value) === 4 ? 2 : 1);
+                }
                 setResultado(null);
                 setRelatorioAusentes(null);
                 setCorrecaoAlunoAtual(null);
@@ -2418,6 +2423,7 @@ function App() {
                 <>
                   <option value={2}>2º Bimestre</option>
                   <option value={3}>3º Bimestre</option>
+                  <option value={4}>4º Bimestre</option>
                 </>
               ) : (
                 <>
@@ -2452,7 +2458,11 @@ function App() {
                 }}
               >
                 {escolaEhDaniela() ? (
-                  <option value={1}>Simulado 1</option>
+                  Number(bimestre) === 4 ? (
+                    <option value={2}>Simulado 2</option>
+                  ) : (
+                    <option value={1}>Simulado 1</option>
+                  )
                 ) : (
                   <>
                     <option value={1}>Dia 1</option>
