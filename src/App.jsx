@@ -2622,6 +2622,7 @@ function App() {
                             <span>{numeroQuestaoNaProva(questao)}</span>
 
                             <select
+                              translate="no"
                               value={gabaritoOficial[questao.numero] || ""}
                               onChange={(e) => {
                                 setGabaritoOficial((respostasAtuais) => ({
@@ -2791,7 +2792,7 @@ function App() {
                 {correcaoAlunoAtual.respostas_salvas?.length > 0 ? (
                   <div className="respostas-lidas respostas-lidas-compactas">
                     <h3>Respostas e gabarito</h3>
-                    <div className="respostas-lidas-grid">
+                    <div className="respostas-lidas-grid" translate="no">
                       {correcaoAlunoAtual.respostas_salvas.map((resposta) => (
                         <span
                           key={resposta.numero_questao}
@@ -2969,7 +2970,7 @@ function App() {
                 <div className="respostas-lidas">
                   <h3>Respostas consideradas</h3>
 
-                  <div className="respostas-lidas-grid">
+                  <div className="respostas-lidas-grid" translate="no">
                     {resultado.respostas_salvas.map((resposta) => (
                       <span
                         key={resposta.numero_questao}
@@ -3209,7 +3210,7 @@ function App() {
               <div className="respostas-lidas">
                 <h3>Respostas e gabarito</h3>
 
-                <div className="respostas-lidas-grid">
+                <div className="respostas-lidas-grid" translate="no">
                   {detalheAluno.dados.respostas_salvas.map((resposta) => (
                     <span
                       key={resposta.numero_questao}
