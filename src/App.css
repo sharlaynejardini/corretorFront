@@ -498,6 +498,17 @@ textarea {
   font-weight: 800;
 }
 
+.tabela-analise-conteudos th:first-child,
+.tabela-analise-conteudos td:first-child {
+  min-width: 70px;
+}
+
+.tabela-analise-conteudos th:nth-child(3),
+.tabela-analise-conteudos td:nth-child(3) {
+  min-width: 300px;
+  white-space: normal;
+}
+
 .nivel-habilidade {
   display: inline-flex;
   align-items: center;

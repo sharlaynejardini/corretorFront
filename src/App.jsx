@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
 import { numeroQuestaoNaProva } from "./questoes";
+import { obterQuestaoDaniela4b, resumirAnaliseDaniela4b, orientarQuestaoDaniela4b } from "./daniela4b";
 import "./App.css";
 
 const ALTERNATIVAS = ["A", "B", "C", "D", "E", "X"];
@@ -364,6 +365,10 @@ function App() {
   }
 
   function formatarHabilidadeCurta(habilidade = "") {
+    if (escolaEhDaniela() && Number(bimestre) === 4) {
+      const questao = obterQuestaoDaniela4b(habilidade);
+      if (questao) return `Q${questao.numero} · ${questao.habilidade || "Habilidade não informada"} · ${questao.disciplina} – ${questao.conteudo}`;
+    }
     return String(habilidade).replace(/^Q(\d{2})\s*-\s*/, "Q$1 ");
   }
 
@@ -410,20 +415,23 @@ function App() {
       },
     };
     const orientacoes = orientacoesPorBimestre[Number(bimestre)] || orientacoesPorBimestre[2];
+    const orientacao = Number(bimestre) === 4
+      ? orientarQuestaoDaniela4b(obterQuestaoDaniela4b(habilidade), aproveitamento)
+      : orientacoes[codigoQuestao];
 
     if (aproveitamento < 50) {
-      return { nivel: "Prioridade alta", classe: "prioridade-alta", orientacao: orientacoes[codigoQuestao] };
+      return { nivel: "Prioridade alta", classe: "prioridade-alta", orientacao };
     }
 
     if (aproveitamento < 70) {
-      return { nivel: "Requer atenção", classe: "prioridade-media", orientacao: orientacoes[codigoQuestao] };
+      return { nivel: "Requer atenção", classe: "prioridade-media", orientacao };
     }
 
     if (aproveitamento < 80) {
-      return { nivel: "Em consolidação", classe: "prioridade-consolidacao", orientacao: orientacoes[codigoQuestao] };
+      return { nivel: "Em consolidação", classe: "prioridade-consolidacao", orientacao };
     }
 
-    return { nivel: "Consolidada", classe: "prioridade-baixa", orientacao: orientacoes[codigoQuestao] };
+    return { nivel: "Consolidada", classe: "prioridade-baixa", orientacao };
   }
 
   function normalizarDisciplina(disciplina = "") {
@@ -841,6 +849,12 @@ function App() {
           linhas.forEach((linha) => {
             const id = linha.aluno_id ?? linha.id_aluno ?? linha.id;
             if (!id) return;
+
+            if (escolaEhDaniela() && Number(bimestre) === 4) {
+              const analise = resumirAnaliseDaniela4b(linha.respostas_salvas);
+              resultadoPorAluno[String(id)] = analise.total ? analise : null;
+              return;
+            }
 
             resultadoPorAluno[String(id)] = {
               nota: extrairNota(linha),
@@ -1925,6 +1939,17 @@ function App() {
     }
 
     const escolaSelecionada = escolas.find((escola) => String(escola.id) === String(escolaId));
+    const analiseDaniela4b = escolaEhDaniela() && Number(bimestre) === 4;
+    const areasDaniela = {};
+    if (analiseDaniela4b) {
+      comparacaoTurmas.forEach((resumo) => (resumo.alunos || []).forEach(({ resultado }) => {
+        Object.entries(resultado?.areas || {}).forEach(([area, dados]) => {
+          areasDaniela[area] ||= { acertos: 0, total: 0 };
+          areasDaniela[area].acertos += dados.acertos;
+          areasDaniela[area].total += dados.total;
+        });
+      }));
+    }
     const turmasComNota = comparacaoTurmas.filter((resumo) => Number.isFinite(resumo.mediaGeral));
     const mediaGeralEscola = turmasComNota.length
       ? turmasComNota.reduce((soma, resumo) => soma + resumo.mediaGeral, 0) / turmasComNota.length
@@ -1941,6 +1966,19 @@ function App() {
         )
       )
     ).sort((a, b) => a.localeCompare(b));
+    const disciplinasGraficos = analiseDaniela4b
+      ? ["Ciências da Natureza", "Matemática"]
+      : disciplinasComparacao;
+    const turmasGraficos = analiseDaniela4b ? comparacaoTurmas.map((resumo) => ({
+      ...resumo,
+      mediasDisciplinas: disciplinasGraficos.flatMap((area) => {
+        const notas = (resumo.alunos || []).flatMap(({ resultado }) => {
+          const dados = resultado?.areas?.[area];
+          return dados?.total ? [dados.acertos / dados.total * 10] : [];
+        });
+        return notas.length ? [{ disciplina: area, media: notas.reduce((a, b) => a + b, 0) / notas.length }] : [];
+      }),
+    })) : comparacaoTurmas;
     const turmasPorAno = comparacaoTurmas.reduce((grupos, resumo) => {
       const serie = extrairSerieTurma(resumo.turma.nome) || "Sem ano";
       grupos[serie] = grupos[serie] || [];
@@ -1982,6 +2020,10 @@ function App() {
 
         return a.habilidade.localeCompare(b.habilidade);
       });
+    const questoesAnaliseDaniela = analiseDaniela4b
+      ? [...habilidadesReforcoDaniela].sort((a, b) =>
+          obterQuestaoDaniela4b(a.habilidade).numero - obterQuestaoDaniela4b(b.habilidade).numero)
+      : habilidadesReforcoDaniela;
     const alunosHabilidadesDaniela = escolaEhDaniela()
       ? comparacaoTurmas.flatMap((resumo) =>
           (resumo.alunos || []).map(({ aluno, resultado }) => {
@@ -2013,7 +2055,7 @@ function App() {
             <span>{escolaSelecionada?.nome || "-"}</span>
           </div>
           <div>
-            <strong>Média Global</strong>
+            <strong>{analiseDaniela4b ? "Média de aproveitamento (0–10)" : "Média Global"}</strong>
             <span>{formatarMedia(mediaGeralEscola)}</span>
           </div>
           <div>
@@ -2025,15 +2067,43 @@ function App() {
         {escolaEhDaniela() && (
           <div className="analise-daniela">
             <div className="planilha-cabecalho">
-              <h2>Habilidades do simulado</h2>
-              <span>{disciplinasComparacao.length} habilidade(s)</span>
+              <h2>{analiseDaniela4b ? "Questões e habilidades do simulado" : "Habilidades do simulado"}</h2>
+              <span>{disciplinasComparacao.length} {analiseDaniela4b ? "questão(ões) avaliada(s)" : "habilidade(s)"}</span>
             </div>
+
+            {analiseDaniela4b && (
+              <>
+                <p className="analise-observacao">
+                  Ciências da Natureza: questões 91–120. Matemática: 136–166.
+                  As questões 90, 155 e 161 estão anuladas e não entram no aproveitamento
+                  nem nas indicações de reforço. São 59 questões válidas; a pontuação
+                  oficial da correção permanece separada desta análise pedagógica.
+                </p>
+                <div className="resultado-resumo">
+                  {["Ciências da Natureza", "Matemática"].map((area) => {
+                    const dados = areasDaniela[area];
+                    return (
+                      <div key={area}>
+                        <strong>{area}</strong>
+                        <span>{dados?.total ? `${Math.round(dados.acertos / dados.total * 100)}%` : "Sem correções"}</span>
+                        {dados?.total > 0 && <small>{dados.acertos}/{dados.total} respostas corretas</small>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="analise-observacao">
+                  As descrições dos conteúdos são identificações pedagógicas, não a redação
+                  oficial integral das habilidades do ENEM. O conteúdo da questão 165 ainda
+                  precisa de confirmação. A questão 166 está incluída; sua habilidade não foi informada.
+                </p>
+              </>
+            )}
 
             {habilidadesReforcoDaniela.length === 0 ? (
               <p className="texto-vazio">Ainda não há correções para analisar as habilidades.</p>
             ) : (
               <>
-                <h3 className="analise-subtitulo">Habilidades que mais precisam de reforço</h3>
+                <h3 className="analise-subtitulo">{analiseDaniela4b ? "Questões que mais precisam de reforço" : "Habilidades que mais precisam de reforço"}</h3>
                 <div className="habilidades-reforco-grid">
                   {habilidadesReforcoDaniela.slice(0, 6).map((item) => (
                     <div className="habilidade-reforco-card" key={item.habilidade}>
@@ -2046,17 +2116,19 @@ function App() {
                   ))}
                 </div>
 
-                <h3 className="analise-subtitulo">Análise completa das habilidades</h3>
+                <h3 className="analise-subtitulo">{analiseDaniela4b ? "Análise por questão, habilidade e conteúdo" : "Análise completa das habilidades"}</h3>
                 <p className="analise-observacao">
-                  Cada habilidade foi avaliada por uma questão. Use o resultado como indicador
-                  inicial e confirme as prioridades com novas atividades.
+                  {analiseDaniela4b
+                    ? "Cada linha representa uma questão. Uma habilidade pode aparecer em várias questões; os códigos são específicos de cada área. Use os resultados como indicadores iniciais e confirme as prioridades com novas atividades."
+                    : "Cada habilidade foi avaliada por uma questão. Use o resultado como indicador inicial e confirme as prioridades com novas atividades."}
                 </p>
 
                 <div className="tabela-wrapper tabela-analise-wrapper">
-                  <table className="tabela-comparacao tabela-analise-habilidades">
+                  <table className={`tabela-comparacao tabela-analise-habilidades${analiseDaniela4b ? " tabela-analise-conteudos" : ""}`}>
                     <thead>
                       <tr>
-                        <th>Habilidade avaliada</th>
+                        <th>{analiseDaniela4b ? "Questão" : "Habilidade avaliada"}</th>
+                        {analiseDaniela4b && <><th>Habilidade</th><th>Conteúdo avaliado</th></>}
                         <th>Aproveitamento</th>
                         <th>Resultado</th>
                         <th>Diagnóstico</th>
@@ -2064,7 +2136,8 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {habilidadesReforcoDaniela.map((item) => {
+                      {questoesAnaliseDaniela.map((item) => {
+                        const questao = analiseDaniela4b ? obterQuestaoDaniela4b(item.habilidade) : null;
                         const analise = analisarHabilidadeDaniela(
                           item.habilidade,
                           item.aproveitamento
@@ -2072,7 +2145,11 @@ function App() {
 
                         return (
                           <tr key={item.habilidade}>
-                            <td>{formatarHabilidadeCurta(item.habilidade)}</td>
+                            <td>{questao ? questao.numero : formatarHabilidadeCurta(item.habilidade)}</td>
+                            {analiseDaniela4b && <>
+                              <td>{questao?.habilidade || "Não informada"}</td>
+                              <td>{questao?.disciplina} – {questao?.conteudo}</td>
+                            </>}
                             <td className="percentual-habilidade">
                               {Math.round(item.aproveitamento)}%
                             </td>
@@ -2151,7 +2228,7 @@ function App() {
         )}
 
         <div className="graficos-turmas-grid">
-          {comparacaoTurmas.map((resumo) => (
+          {turmasGraficos.map((resumo) => (
             <div className="grafico-sala" key={resumo.turma.id}>
               <h3>{resumo.turma.nome}</h3>
 
@@ -2182,7 +2259,7 @@ function App() {
 
         <div className="comparacao-turmas">
           <div className="planilha-cabecalho">
-            <h2>Média global por sala</h2>
+            <h2>{analiseDaniela4b ? "Aproveitamento por sala (0–10)" : "Média global por sala"}</h2>
             <span>{comparacaoTurmas.length} turma(s)</span>
           </div>
 
@@ -2210,19 +2287,19 @@ function App() {
               <thead>
                 <tr>
                   <th>Turma</th>
-                  <th>Média Global</th>
-                  {disciplinasComparacao.map((disciplina) => (
+                  <th>{analiseDaniela4b ? "Aproveitamento (0–10)" : "Média Global"}</th>
+                  {disciplinasGraficos.map((disciplina) => (
                     <th key={disciplina}>{disciplina}</th>
                   ))}
                   <th>Alunos considerados</th>
                 </tr>
               </thead>
               <tbody>
-                {comparacaoTurmas.map((resumo) => (
+                {turmasGraficos.map((resumo) => (
                   <tr key={resumo.turma.id}>
                     <td>{resumo.turma.nome}</td>
                     <td className="nota-global">{formatarMedia(resumo.mediaGeral)}</td>
-                    {disciplinasComparacao.map((disciplina) => {
+                    {disciplinasGraficos.map((disciplina) => {
                       const mediaDisciplina = resumo.mediasDisciplinas.find(
                         (item) => item.disciplina === disciplina
                       );
