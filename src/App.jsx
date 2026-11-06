@@ -690,7 +690,7 @@ function App() {
 
     try {
       const modeloResponse = await api.get("/modelo-prova", {
-        params: { escola_id: escolaId, bimestre, dia },
+        params: { escola_id: escolaId, bimestre, dia, serie: serieGabarito, codigo_gabarito: codigoGabarito },
       });
 
       setDisciplinasModelo(modeloResponse.data.disciplinas || []);
