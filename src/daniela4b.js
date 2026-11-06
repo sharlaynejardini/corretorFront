@@ -54,18 +54,18 @@ const matematica = [
   [152, "H21", "Interpretação de gráficos estatísticos"],
   [153, "H8", "Porcentagem e representação decimal"],
   [154, "H12", "Medidas de tendência central e interpretação de tabelas"],
-  [155, null, "Geometria plana – Área de setores circulares"],
+  [155, "H8", "Geometria plana – Área de setores circulares"],
   [156, "H7", "Expressões algébricas e cálculo de tarifas"],
   [157, "H8", "Porcentagem, descontos e acréscimos"],
   [158, "H23", "Porcentagem e cálculo de preços"],
   [159, "H4", "Grandezas e unidades de medida"],
   [160, "H27", "Proporcionalidade, vazão e volume"],
-  [161, null, "Interpretação de gráficos e funções"],
+  [161, "H20", "Interpretação de gráficos e funções"],
   [162, "H13", "Geometria espacial e identificação de sólidos"],
   [163, "H22", "Geometria plana, circunferências e comprimento de correias"],
   [164, "H16", "Geometria plana, triângulos e distâncias"],
-  [165, "H12", "Conteúdo não confirmado na imagem consultada"],
-  [166, null, "Razão, proporção e densidade demográfica"],
+  [165, "H12", "Conteúdo específico pendente de confirmação"],
+  [166, "H4", "Razão, proporção e densidade demográfica"],
 ];
 
 export const QUESTOES_DANIELA_4B = Object.fromEntries([

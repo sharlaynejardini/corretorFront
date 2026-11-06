@@ -2079,6 +2079,12 @@ function App() {
                   nem nas indicações de reforço. São 59 questões válidas; a pontuação
                   oficial da correção permanece separada desta análise pedagógica.
                 </p>
+                <ul className="analise-observacao">
+                  {[155, 161].map((numero) => {
+                    const questao = obterQuestaoDaniela4b(`Questao ${numero}`);
+                    return <li key={numero}>{numero} — {questao.habilidade} — {questao.conteudo}. ANULADA.</li>;
+                  })}
+                </ul>
                 <div className="resultado-resumo">
                   {["Ciências da Natureza", "Matemática"].map((area) => {
                     const dados = areasDaniela[area];
@@ -2094,7 +2100,7 @@ function App() {
                 <p className="analise-observacao">
                   As descrições dos conteúdos são identificações pedagógicas, não a redação
                   oficial integral das habilidades do ENEM. O conteúdo da questão 165 ainda
-                  precisa de confirmação. A questão 166 está incluída; sua habilidade não foi informada.
+                  precisa de confirmação. A questão 166 está incluída com a habilidade H4.
                 </p>
               </>
             )}

@@ -14,8 +14,11 @@ test("mapeamento preserva as 62 questoes e as particularidades informadas", () =
   assert.equal(obterQuestaoDaniela4b("Questao 91").area, "Ciências da Natureza");
   assert.equal(obterQuestaoDaniela4b("Questao 149").habilidade, "H20");
   assert.equal(obterQuestaoDaniela4b("Questao 149").area, "Matemática");
-  assert.match(obterQuestaoDaniela4b("Questao 165").conteudo, /não confirmado/);
-  assert.equal(obterQuestaoDaniela4b("Questao 166").habilidade, null);
+  assert.equal(obterQuestaoDaniela4b("Questao 155").habilidade, "H8");
+  assert.equal(obterQuestaoDaniela4b("Questao 161").habilidade, "H20");
+  assert.equal(obterQuestaoDaniela4b("Questao 165").habilidade, "H12");
+  assert.match(obterQuestaoDaniela4b("Questao 165").conteudo, /pendente de confirmação/);
+  assert.equal(obterQuestaoDaniela4b("Questao 166").habilidade, "H4");
   assert.match(obterQuestaoDaniela4b("Questao 166").conteudo, /densidade demográfica/);
   assert.equal(obterQuestaoDaniela4b("Q01 - H16 - Lingua Portuguesa"), null);
 });
