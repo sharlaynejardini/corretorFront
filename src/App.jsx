@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
+import { numeroQuestaoNaProva } from "./questoes";
 import "./App.css";
 
 const ALTERNATIVAS = ["A", "B", "C", "D", "E", "X"];
@@ -2535,7 +2536,7 @@ function App() {
                       <div className="questoes-grid">
                         {questoesDisciplina.map((questao) => (
                           <label className="questao-gabarito" key={questao.numero}>
-                            <span>{questao.numero}</span>
+                            <span>{numeroQuestaoNaProva(questao)}</span>
 
                             <select
                               value={gabaritoOficial[questao.numero] || ""}
@@ -2713,7 +2714,7 @@ function App() {
                           key={resposta.numero_questao}
                           className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
                         >
-                          {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta || "-"}
+                          {numeroQuestaoNaProva(resposta)}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta || "-"}
                         </span>
                       ))}
                     </div>
@@ -2891,7 +2892,7 @@ function App() {
                         key={resposta.numero_questao}
                         className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
                       >
-                        {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
+                        {numeroQuestaoNaProva(resposta)}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
                       </span>
                     ))}
                   </div>
@@ -3131,7 +3132,7 @@ function App() {
                       key={resposta.numero_questao}
                       className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
                     >
-                      {resposta.numero_questao}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
+                      {numeroQuestaoNaProva(resposta)}: {resposta.resposta_aluno || "-"} / {resposta.resposta_correta}
                     </span>
                   ))}
                 </div>
