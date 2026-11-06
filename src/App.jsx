@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "./api";
-import { numeroQuestaoNaProva } from "./questoes";
+import { numeroQuestaoNaProva, ordenarRespostasPorDisciplinas } from "./questoes";
 import { obterQuestaoDaniela4b, resumirAnaliseDaniela4b, orientarQuestaoDaniela4b } from "./daniela4b";
 import "./App.css";
 
@@ -295,7 +295,7 @@ function App() {
   }, [resultadosPorAluno]);
 
   const disciplinasResultado = resultado?.respostas_salvas
-    ? calcularNotasDisciplinas(resumirPorDisciplina(resultado.respostas_salvas))
+    ? calcularNotasDisciplinas(resumirPorDisciplina(respostasNaOrdemNormal(resultado.respostas_salvas)))
     : {};
   const gruposGabaritoDisponiveis = useMemo(() => {
     if (Number(serieGabarito) === 8 && Number(dia) === 1) {
@@ -517,6 +517,12 @@ function App() {
 
       return String(a).localeCompare(String(b));
     });
+  }
+
+  function respostasNaOrdemNormal(respostas = []) {
+    if (!normalizarDisciplina(obterEscolaSelecionada()?.nome).includes("takaoka")) return respostas;
+    const disciplinas = ordenarDisciplinasResultado([...new Set(respostas.map((resposta) => resposta.disciplina))]);
+    return ordenarRespostasPorDisciplinas(respostas, disciplinas);
   }
 
   function obterCorDisciplina(disciplina = "") {
@@ -2793,7 +2799,7 @@ function App() {
                   <div className="respostas-lidas respostas-lidas-compactas">
                     <h3>Respostas e gabarito</h3>
                     <div className="respostas-lidas-grid" translate="no">
-                      {correcaoAlunoAtual.respostas_salvas.map((resposta) => (
+                      {respostasNaOrdemNormal(correcaoAlunoAtual.respostas_salvas).map((resposta) => (
                         <span
                           key={resposta.numero_questao}
                           className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
@@ -2971,7 +2977,7 @@ function App() {
                   <h3>Respostas consideradas</h3>
 
                   <div className="respostas-lidas-grid" translate="no">
-                    {resultado.respostas_salvas.map((resposta) => (
+                    {respostasNaOrdemNormal(resultado.respostas_salvas).map((resposta) => (
                       <span
                         key={resposta.numero_questao}
                         className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
@@ -3211,7 +3217,7 @@ function App() {
                 <h3>Respostas e gabarito</h3>
 
                 <div className="respostas-lidas-grid" translate="no">
-                  {detalheAluno.dados.respostas_salvas.map((resposta) => (
+                  {respostasNaOrdemNormal(detalheAluno.dados.respostas_salvas).map((resposta) => (
                     <span
                       key={resposta.numero_questao}
                       className={resposta.acertou ? "resposta-correta" : "resposta-incorreta"}
